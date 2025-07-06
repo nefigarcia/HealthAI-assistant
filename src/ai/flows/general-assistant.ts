@@ -13,6 +13,7 @@ import { z } from 'zod';
 import { bookAppointmentTool, getAvailableSlotsTool, getAppointmentsTool } from '@/ai/tools/calendar-tools';
 import { getDashboardStatsTool } from '@/ai/tools/stats-tools';
 import { getBillingOverviewTool, getInvoicesTool } from '@/ai/tools/billing-tools';
+import { getPatientsTool } from '@/ai/tools/patient-tools';
 
 const AssistantInputSchema = z.object({
   query: z.string().describe('The user query for the assistant.'),
@@ -37,7 +38,7 @@ const generalAssistantFlow = ai.defineFlow(
   async (input) => {
     const today = new Date().toISOString().split('T')[0];
 
-    const systemPrompt = `You are an intelligent AI assistant for a healthcare clinic administrator. Your tasks are to manage appointments, provide billing information, and report on clinic statistics using the provided tools. The current date is ${today}. Use this to determine the correct date for any user requests involving "today" or "tomorrow".
+    const systemPrompt = `You are an intelligent AI assistant for a healthcare clinic administrator. Your tasks are to manage appointments, provide billing information, and report on clinic statistics using the provided tools. You can also retrieve patient information. The current date is ${today}. Use this to determine the correct date for any user requests involving "today" or "tomorrow".
 
 When you use a tool, you MUST format its output into a friendly, human-readable sentence.
 - For available slots, respond like: "The available slots for [date] are 9:00 AM, 10:00 AM, and 11:30 AM."
@@ -45,6 +46,7 @@ When you use a tool, you MUST format its output into a friendly, human-readable 
 - For listing appointments, respond like: "Here are the appointments for today: - 10:00 AM: John Doe (Check-up) - 11:30 AM: Jane Smith (Consultation)".
 - For statistics, summarize them clearly. For example: "Here are the clinic stats: 1,254 total patients, 32 appointments today, and $12,450 in revenue."
 - For billing, present the information in a clear and concise way.
+- For listing patients, respond with a comma-separated list of names. For example: "The patients are John Doe, Jane Smith, and Olivia Martin." If only one patient is found, give their details.
 
 Your final response MUST be clean and not include any trace of tool execution or internal thoughts.`;
 
@@ -59,6 +61,7 @@ Your final response MUST be clean and not include any trace of tool execution or
         getDashboardStatsTool,
         getBillingOverviewTool,
         getInvoicesTool,
+        getPatientsTool,
       ],
       output: {
         schema: AssistantOutputSchema,
