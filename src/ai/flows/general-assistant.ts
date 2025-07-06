@@ -40,6 +40,7 @@ const generalAssistantFlow = ai.defineFlow(
 If the user says "today" or "tomorrow", use the current date which is ${today} to calculate the correct date to use for the tool.
 
 When you receive information from a tool, you MUST format it into a friendly, human-readable sentence. Do not output raw JSON or markdown code blocks.
+Your final response should be clean and not include any trace of the tool execution, like "[Running tool...]" messages.
 
 For example, if the tool returns a list of available slots like ["09:00", "10:00"], you should respond with something like: "The available slots are 9:00 AM and 10:00 AM."
 
