@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const PersonalizeReminderMessageInputSchema = z.object({
   patientName: z.string().describe('The name of the patient.'),
@@ -74,5 +74,3 @@ const personalizeReminderMessageFlow = ai.defineFlow(
     return output!;
   }
 );
-
-

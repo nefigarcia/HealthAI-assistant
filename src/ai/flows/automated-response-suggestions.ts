@@ -9,7 +9,7 @@
  */
 
 import {ai} from '@/ai/genkit';
-import {z} from 'genkit';
+import {z} from 'zod';
 
 const SuggestedResponsesInputSchema = z.object({
   patientInquiry: z.string().describe('The patient inquiry to generate responses for.'),
