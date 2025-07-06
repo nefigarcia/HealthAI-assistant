@@ -26,22 +26,6 @@ export async function askAssistant(input: AssistantInput): Promise<AssistantOutp
   return generalAssistantFlow(input);
 }
 
-const prompt = ai.definePrompt({
-  name: 'generalAssistantPrompt',
-  input: {schema: AssistantInputSchema.extend({ today: z.string() }) },
-  output: {schema: AssistantOutputSchema},
-  tools: [bookAppointmentTool, getAvailableSlotsTool, getAppointmentsTool],
-  system: `You are a helpful AI assistant for a healthcare clinic administrator. Your primary role is to manage the appointment schedule. Use the provided tools to check for available slots, book new appointments, and list existing appointments for a given day.
-  
-  If the user says "today" or "tomorrow", use the current date which is {{{today}}} to calculate the correct date to use for the tool.
-  
-  Be concise and professional in your responses. When booking an appointment, always confirm the result of the booking.`,
-  prompt: `{{{query}}}`,
-  config: {
-    model: 'googleai/gemini-1.5-flash-latest'
-  }
-});
-
 const generalAssistantFlow = ai.defineFlow(
   {
     name: 'generalAssistantFlow',
@@ -50,7 +34,25 @@ const generalAssistantFlow = ai.defineFlow(
   },
   async (input) => {
     const today = new Date().toISOString().split('T')[0];
-    const {output} = await prompt({ ...input, today });
+
+    const systemPrompt = `You are a helpful AI assistant for a healthcare clinic administrator. Your primary role is to manage the appointment schedule. Use the provided tools to check for available slots, book new appointments, and list existing appointments for a given day.
+  
+If the user says "today" or "tomorrow", use the current date which is ${today} to calculate the correct date to use for the tool.
+  
+Be concise and professional in your responses. When booking an appointment, always confirm the result of the booking.`;
+
+    const response = await ai.generate({
+      model: 'googleai/gemini-1.5-flash-latest',
+      system: systemPrompt,
+      prompt: input.query,
+      tools: [bookAppointmentTool, getAvailableSlotsTool, getAppointmentsTool],
+      output: {
+        schema: AssistantOutputSchema,
+      },
+    });
+
+    const output = response.output;
+
     if (!output) {
       throw new Error("The AI assistant failed to generate a response.");
     }
