@@ -37,6 +37,9 @@ const prompt = ai.definePrompt({
 
   Appointment Details:
   {{appointmentDetails}}`,
+  config: {
+    model: 'googleai/gemini-1.5-flash-latest',
+  },
 });
 
 const summarizeAppointmentFlow = ai.defineFlow(

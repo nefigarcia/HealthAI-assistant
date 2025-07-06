@@ -61,6 +61,9 @@ const prompt = ai.definePrompt({
 
   Reminder message:
 `,
+  config: {
+    model: 'googleai/gemini-1.5-flash-latest',
+  },
 });
 
 const personalizeReminderMessageFlow = ai.defineFlow(

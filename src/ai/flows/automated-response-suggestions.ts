@@ -41,6 +41,9 @@ const prompt = ai.definePrompt({
 
   Suggested Responses:
   -`, // The model will generate responses as a list (starting with '-').
+  config: {
+    model: 'googleai/gemini-1.5-flash-latest',
+  },
 });
 
 const automatedResponseSuggestionsFlow = ai.defineFlow(
