@@ -98,8 +98,10 @@ export default function SubscribePage() {
                 </ul>
               </CardContent>
               <CardFooter>
-                <Button className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                  {plan.cta}
+                <Button asChild className="w-full" variant={plan.popular ? 'default' : 'outline'}>
+                  <Link href={plan.name === 'Enterprise' ? 'mailto:sales@healthai.com' : '/register'}>
+                    {plan.cta}
+                  </Link>
                 </Button>
               </CardFooter>
             </Card>
