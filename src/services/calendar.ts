@@ -5,10 +5,22 @@ export interface Appointment {
   type: string;
 }
 
+const today = new Date();
+const tomorrow = new Date();
+tomorrow.setDate(today.getDate() + 1);
+
+const formatDate = (date: Date): string => {
+  const year = date.getFullYear();
+  const month = (date.getMonth() + 1).toString().padStart(2, '0');
+  const day = date.getDate().toString().padStart(2, '0');
+  return `${year}-${month}-${day}`;
+}
+
 // In-memory store for appointments for simplicity
 let appointments: Appointment[] = [
-  { patientName: 'John Doe', date: '2024-08-15', time: '10:00', type: 'Check-up' },
-  { patientName: 'Jane Smith', date: '2024-08-15', time: '11:30', type: 'Consultation' },
+  { patientName: 'John Doe', date: formatDate(today), time: '10:00', type: 'Check-up' },
+  { patientName: 'Jane Smith', date: formatDate(today), time: '11:30', type: 'Consultation' },
+  { patientName: 'Liam Johnson', date: formatDate(tomorrow), time: '09:00', type: 'New Patient' },
 ];
 
 const allSlots = [
