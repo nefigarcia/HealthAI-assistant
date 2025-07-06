@@ -36,10 +36,10 @@ export function SidebarNav() {
             <div className="p-4 border-t border-border">
                  <Button
                     asChild
-                    variant="ghost"
+                    variant={pathname === "/dashboard/settings" ? "secondary" : "ghost"}
                     className="w-full justify-start"
                 >
-                    <Link href="#">
+                    <Link href="/dashboard/settings">
                         <Settings className="mr-2 h-4 w-4" />
                         Settings
                     </Link>
