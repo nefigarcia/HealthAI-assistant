@@ -29,6 +29,10 @@ export default function RegisterPage() {
                 <Input id="name" type="text" placeholder="John Doe" required />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="clinicName">Clinic Name</Label>
+                <Input id="clinicName" type="text" placeholder="HealthAI Clinic" required />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="m@example.com" required />
               </div>
