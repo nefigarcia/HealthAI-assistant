@@ -7,6 +7,7 @@ import { Check } from "lucide-react";
 const plans = [
   {
     name: "Starter",
+    id: "starter",
     price: "49",
     description: "For small clinics and individual practitioners getting started.",
     features: [
@@ -20,6 +21,7 @@ const plans = [
   },
   {
     name: "Professional",
+    id: "professional",
     price: "99",
     description: "For growing practices that need more power and support.",
     features: [
@@ -34,6 +36,7 @@ const plans = [
   },
   {
     name: "Enterprise",
+    id: "enterprise",
     price: "Contact Us",
     description: "For large healthcare organizations with custom needs.",
     features: [
@@ -99,7 +102,7 @@ export default function SubscribePage() {
               </CardContent>
               <CardFooter>
                 <Button asChild className="w-full" variant={plan.popular ? 'default' : 'outline'}>
-                  <Link href={plan.name === 'Enterprise' ? 'mailto:sales@healthai.com' : '/register'}>
+                  <Link href={plan.id === 'enterprise' ? 'mailto:sales@healthai.com' : `/register?plan=${plan.id}`}>
                     {plan.cta}
                   </Link>
                 </Button>
