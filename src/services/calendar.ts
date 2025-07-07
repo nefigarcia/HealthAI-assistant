@@ -12,6 +12,7 @@ async function apiFetch(endpoint: string, options: RequestInit = {}) {
     throw new Error("NEXT_PUBLIC_API_URL is not set in your environment variables.");
   }
   const url = `${API_URL}${endpoint}`;
+  console.log(`Making API request to: ${url}`);
   const response = await fetch(url, {
     ...options,
     headers: {

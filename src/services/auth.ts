@@ -12,6 +12,7 @@ async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<an
     throw new Error("NEXT_PUBLIC_API_URL is not set in your environment variables.");
   }
   const url = `${API_URL}${endpoint}`;
+  console.log(`Making API request to: ${url}`);
   
   const response = await fetch(url, {
     ...options,
@@ -31,9 +32,9 @@ async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<an
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-    const responseData = await apiFetch('/login', {
+    const responseData = await apiFetch('/Login', {
         method: 'POST',
-        body: JSON.stringify({email: email, password: password }),
+        body: JSON.stringify({email: email, contrasena: password }),
     });
     
     return {
