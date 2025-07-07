@@ -12,14 +12,12 @@ export interface BillingOverview {
     outstanding: number;
 }
 
-const API_URL = process.env.NEXT_PUBLIC_API_URL;
-
 async function apiFetch(endpoint: string, options?: RequestInit) {
+  const API_URL = process.env.NEXT_PUBLIC_API_URL;
   if (!API_URL) {
-    throw new Error("NEXT_PUBLIC_API_URL is not set in your environment variables.");
+    throw new Error("API URL is not configured. Please set NEXT_PUBLIC_API_URL in your .env file and restart the development server.");
   }
   const url = `${API_URL}${endpoint}`;
-  console.log(`Making API request to: ${url}`);
   const response = await fetch(url, {
     ...options,
     headers: {
