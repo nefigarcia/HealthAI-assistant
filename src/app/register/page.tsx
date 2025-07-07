@@ -33,6 +33,10 @@ export default function RegisterPage() {
                 <Input id="clinicName" type="text" placeholder="HealthAI Clinic" required />
               </div>
               <div className="space-y-2">
+                <Label htmlFor="phone">Phone Number</Label>
+                <Input id="phone" type="tel" placeholder="(123) 456-7890" required />
+              </div>
+              <div className="space-y-2">
                 <Label htmlFor="email">Email</Label>
                 <Input id="email" type="email" placeholder="m@example.com" required />
               </div>
