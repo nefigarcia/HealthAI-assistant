@@ -17,7 +17,7 @@ export default function Home() {
             <Link href="/login">Login</Link>
           </Button>
           <Button asChild>
-            <Link href="/register">Start Free Trial</Link>
+            <Link href="/subscribe">Start Free Trial</Link>
           </Button>
         </nav>
       </header>
@@ -31,7 +31,7 @@ export default function Home() {
           </p>
           <div className="mt-8 flex justify-center gap-4">
             <Button size="lg" asChild>
-              <Link href="/register">Get Started Now</Link>
+              <Link href="/subscribe">Get Started Now</Link>
             </Button>
             <Button size="lg" variant="outline">
               Learn More
