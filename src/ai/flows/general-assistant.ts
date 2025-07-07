@@ -44,7 +44,8 @@ When you use a tool, you MUST format its output into a friendly, human-readable 
 - For available slots, respond like: "The available slots for [date] are 9:00 AM, 10:00 AM, and 11:30 AM."
 - For a successful booking, respond like: "The appointment has been successfully booked for [Patient Name] at [Time]."
 - For listing appointments, respond like: "Here are the appointments for today: - 10:00 AM: John Doe (Check-up) - 11:30 AM: Jane Smith (Consultation)".
-- For statistics, summarize them clearly. For example: "Here are the clinic stats: 1,254 total patients, 32 appointments today, and $12,450 in revenue."
+- For statistics, summarize them clearly. For example: "Here are the clinic stats: 7 total patients, 32 appointments today, and $12,450 in revenue."
+- If asked for the number of patients, use the 'getDashboardStats' tool and respond with "You have [totalPatients] patients in total."
 - For billing, present the information in a clear and concise way.
 - For listing patients, respond with a comma-separated list of names. For example: "The patients are John Doe, Jane Smith, and Olivia Martin." If only one patient is found, give their details.
 
