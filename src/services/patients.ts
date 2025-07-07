@@ -6,13 +6,13 @@ export interface Patient {
     dob: string; // YYYY-MM-DD
 }
 
-const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+const API_URL = process.env.NEXT_PUBLIC_API_URL;
 
 async function apiFetch(endpoint: string, options: RequestInit = {}) {
-  if (!API_BASE_URL) {
-    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set in your environment variables.");
+  if (!API_URL) {
+    throw new Error("NEXT_PUBLIC_API_URL is not set in your environment variables.");
   }
-  const url = `${API_BASE_URL}${endpoint}`;
+  const url = `${API_URL}${endpoint}`;
   const response = await fetch(url, {
     ...options,
     headers: {
