@@ -7,6 +7,7 @@ export interface Appointment {
   date: string; // YYYY-MM-DD
   time: string; // HH:mm
   type: string;
+  status: 'confirmed' | 'pending' | 'cancelled';
 }
 
 export async function getAvailableSlots(date: string): Promise<string[]> {
