@@ -12,24 +12,34 @@ export interface BillingOverview {
     outstanding: number;
 }
 
-// In-memory store for billing data
-const invoices: Invoice[] = [
-    { invoiceId: 'INV001', patientName: 'John Doe', date: '2025-07-01', amount: 150, status: 'Paid' },
-    { invoiceId: 'INV002', patientName: 'Jane Smith', date: '2025-07-02', amount: 200, status: 'Paid' },
-    { invoiceId: 'INV003', patientName: 'Olivia Martin', date: '2025-07-05', amount: 75, status: 'Unpaid' },
-    { invoiceId: 'INV004', patientName: 'John Doe', date: '2025-06-15', amount: 50, status: 'Overdue' },
-];
+const API_BASE_URL = process.env.NEXT_PUBLIC_API_BASE_URL;
+
+async function apiFetch(endpoint: string, options?: RequestInit) {
+  if (!API_BASE_URL) {
+    throw new Error("NEXT_PUBLIC_API_BASE_URL is not set in your environment variables.");
+  }
+  const url = `${API_BASE_URL}${endpoint}`;
+  const response = await fetch(url, {
+    ...options,
+    headers: {
+      'Content-Type': 'application/json',
+      ...options?.headers,
+    },
+  });
+  if (!response.ok) {
+    const errorText = await response.text();
+    throw new Error(`API request failed with status ${response.status}: ${errorText}`);
+  }
+  return response.json();
+}
+
 
 export async function getBillingOverview(): Promise<BillingOverview> {
-    const totalBilled = invoices.reduce((sum, inv) => sum + inv.amount, 0);
-    const totalCollected = invoices.filter(inv => inv.status === 'Paid').reduce((sum, inv) => sum + inv.amount, 0);
-    const outstanding = totalBilled - totalCollected;
-    return { totalBilled, totalCollected, outstanding };
+    return apiFetch('/billing/overview');
 }
 
 export async function getInvoices(patientName?: string): Promise<Invoice[]> {
-    if (patientName) {
-        return invoices.filter(inv => inv.patientName.toLowerCase() === patientName.toLowerCase());
-    }
-    return invoices;
+    const endpoint = patientName ? `/invoices?patientName=${encodeURIComponent(patientName)}` : '/invoices';
+    const invoices = await apiFetch(endpoint);
+    return invoices || [];
 }
