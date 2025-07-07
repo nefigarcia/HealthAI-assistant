@@ -13,6 +13,7 @@ import {
 } from "@/components/ui/dropdown-menu"
 import type { CurrentUser } from "@/services/user"
 import Link from "next/link"
+import { logoutAction } from "@/app/logout/actions";
 
 export function UserNav({ user }: { user: CurrentUser | null }) {
   const name = user?.name || "Dr. Admin";
@@ -51,9 +52,13 @@ export function UserNav({ user }: { user: CurrentUser | null }) {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <DropdownMenuItem asChild>
-          <Link href="/login">Log out</Link>
-        </DropdownMenuItem>
+        <form action={logoutAction}>
+            <button type="submit" className="w-full">
+                <DropdownMenuItem>
+                    Log out
+                </DropdownMenuItem>
+            </button>
+        </form>
       </DropdownMenuContent>
     </DropdownMenu>
   )
