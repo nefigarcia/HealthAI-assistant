@@ -1,34 +1,33 @@
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
+import { getDashboardStats } from "@/services/stats";
 import { Users, Calendar, MessageSquare, DollarSign } from "lucide-react"
 
-const stats = [
-    {
-        title: "Total Patients",
-        value: "1,254",
-        change: "+12% this month",
-        icon: Users,
-    },
-    {
-        title: "Appointments Today",
-        value: "32",
-        change: "4 pending",
-        icon: Calendar,
-    },
-    {
-        title: "AI Interactions",
-        value: "452",
-        change: "+20% this week",
-        icon: MessageSquare,
-    },
-    {
-        title: "Revenue",
-        value: "$12,450",
-        change: "+5% this month",
-        icon: DollarSign,
-    },
-]
+export async function StatsCards() {
+    const statsData = await getDashboardStats();
 
-export function StatsCards() {
+    const stats = [
+        {
+            title: "Total Patients",
+            value: statsData?.totalPatients?.toLocaleString() || "0",
+            icon: Users,
+        },
+        {
+            title: "Appointments Today",
+            value: statsData?.appointmentsToday?.toLocaleString() || "0",
+            icon: Calendar,
+        },
+        {
+            title: "AI Interactions",
+            value: statsData?.aiInteractions?.toLocaleString() || "0",
+            icon: MessageSquare,
+        },
+        {
+            title: "Revenue",
+            value: `$${statsData?.revenue?.toLocaleString('en-US', { minimumFractionDigits: 2, maximumFractionDigits: 2 }) || '0.00'}`,
+            icon: DollarSign,
+        },
+    ];
+
     return (
         <div className="grid gap-4 md:grid-cols-2 lg:grid-cols-4">
             {stats.map((stat) => (
@@ -39,7 +38,6 @@ export function StatsCards() {
                     </CardHeader>
                     <CardContent>
                         <div className="text-2xl font-bold">{stat.value}</div>
-                        <p className="text-xs text-muted-foreground">{stat.change}</p>
                     </CardContent>
                 </Card>
             ))}

@@ -57,8 +57,8 @@ function RegisterForm() {
     setIsLoading(false);
 
     if (result.success) {
-      toast({ title: "Account Created", description: "Redirecting to login..." });
-      router.push('/login');
+      toast({ title: "Account Created", description: "Redirecting to your dashboard..." });
+      router.push('/dashboard');
     } else {
       toast({ variant: "destructive", title: "Registration Failed", description: result.message });
     }
