@@ -33,7 +33,7 @@ async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<an
 export async function login(email: string, password: string): Promise<AuthResponse> {
     const responseData = await apiFetch('/login', {
         method: 'POST',
-        body: JSON.stringify({ email, password }),
+        body: JSON.stringify({email: email, password: password }),
     });
     
     return {
