@@ -21,6 +21,8 @@ let appointments: Appointment[] = [
   { patientName: 'John Doe', date: formatDate(today), time: '10:00', type: 'Check-up' },
   { patientName: 'Jane Smith', date: formatDate(today), time: '11:30', type: 'Consultation' },
   { patientName: 'Liam Johnson', date: formatDate(tomorrow), time: '09:00', type: 'New Patient' },
+  { patientName: 'Sarah Lee', date: formatDate(today), time: '14:00', type: 'Consultation' },
+  { patientName: 'Sarah Lee', date: formatDate(new Date(today.getTime() + 7 * 24 * 60 * 60 * 1000)), time: '10:30', type: 'Follow-up' },
 ];
 
 const allSlots = [
@@ -58,4 +60,39 @@ export async function bookAppointment(
 
 export async function getAppointments(date: string): Promise<Appointment[]> {
     return appointments.filter(app => app.date === date).sort((a,b) => a.time.localeCompare(b.time));
+}
+
+export async function getAppointmentsForPatient(patientName: string): Promise<Appointment[]> {
+    return appointments.filter(app => app.patientName.toLowerCase() === patientName.toLowerCase()).sort((a,b) => a.date.localeCompare(b.date) || a.time.localeCompare(b.time));
+}
+
+export async function rescheduleAppointment(
+  patientName: string,
+  currentDate: string,
+  currentTime: string,
+  newDate: string,
+  newTime: string
+): Promise<{ success: boolean; message: string }> {
+  const appIndex = appointments.findIndex(app => 
+    app.patientName.toLowerCase() === patientName.toLowerCase() && 
+    app.date === currentDate && 
+    app.time === currentTime
+  );
+
+  if (appIndex === -1) {
+    return { success: false, message: "Could not find the original appointment to reschedule." };
+  }
+
+  const originalAppointment = appointments[appIndex];
+
+  const availableSlots = await getAvailableSlots(newDate);
+  if (newDate !== currentDate || newTime !== currentTime) {
+    if (!availableSlots.includes(newTime)) {
+        return { success: false, message: `The new time slot ${newTime} on ${newDate} is not available.` };
+    }
+  }
+
+  appointments[appIndex] = { ...originalAppointment, date: newDate, time: newTime };
+  
+  return { success: true, message: `Your appointment has been successfully rescheduled to ${newDate} at ${newTime}.` };
 }
