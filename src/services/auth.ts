@@ -10,7 +10,7 @@ export interface AuthResponse {
 export async function login(email: string, password: string): Promise<AuthResponse> {
     try {
         // The API now sets a session cookie, so we just need to check for success.
-        const responseData = await apiFetch('/Login', {
+        const responseData = await apiFetch('/login', {
             method: 'POST',
             body: JSON.stringify({ email: email, contrasena: password }),
         });
