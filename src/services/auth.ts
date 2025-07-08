@@ -8,26 +8,22 @@ export interface AuthResponse {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-    try {
-        // The API now sets a session cookie, so we just need to check for success.
-        const responseData = await apiFetch('/login', {
-            method: 'POST',
-            body: JSON.stringify({ email: email, contrasena: password }),
-        });
-        
-        if (!responseData || !responseData.success) {
-             return { success: false, message: responseData.message || 'Login failed. Please try again.' };
-        }
-
-        return {
-            success: true,
-            message: responseData.message
-        };
-    } catch (error: any) {
-        // The error message from apiFetch is already generic enough.
-        // We can use it directly.
-        return { success: false, message: error.message };
+    // This function no longer uses a try-catch. It will either succeed and return
+    // the response, or it will let the error from `apiFetch` bubble up.
+    const responseData = await apiFetch('/login', {
+        method: 'POST',
+        body: JSON.stringify({ email: email, contrasena: password }),
+    });
+    
+    // The `apiFetch` function now ensures `responseData` exists if we get here.
+    if (!responseData.success) {
+         throw new Error(responseData.message || 'Login failed. Please try again.');
     }
+
+    return {
+        success: true,
+        message: responseData.message
+    };
 }
 
 export async function logout(): Promise<AuthResponse> {
