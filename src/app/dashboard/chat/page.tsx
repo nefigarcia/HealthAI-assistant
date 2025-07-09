@@ -7,7 +7,7 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { askAssistant } from "@/ai/flows/general-assistant";
+import { askAssistantAction } from "./actions"; // Updated import
 import { Bot, Sparkles, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 
@@ -100,7 +100,8 @@ export default function ChatPage() {
       setIsAssistantLoading(true);
 
       try {
-        const result = await askAssistant({ query: currentInput });
+        // Updated to call the new server action
+        const result = await askAssistantAction(currentInput);
         const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
         setAdminMessages(prev => [...prev, newAssistantMessage]);
       } catch (error: any) {
@@ -110,6 +111,8 @@ export default function ChatPage() {
           title: "AI Assistant Error",
           description: error.message || "An error occurred while communicating with the AI.",
         });
+        const errorMessage: Message = { id: Date.now() + 1, sender: "assistant", text: "Sorry, I ran into an unexpected error." };
+        setAdminMessages(prev => [...prev, errorMessage]);
       } finally {
         setIsAssistantLoading(false);
       }
