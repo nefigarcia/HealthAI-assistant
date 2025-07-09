@@ -1,11 +1,11 @@
-import { headers } from 'next/headers';
+import { cookies } from 'next/headers';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
   // For client-side calls, use a relative URL. For server-side, use the absolute URL.
   const isServer = typeof window === 'undefined';
-  const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : '';
+  const baseUrl = isServer ? 'http://127.0.0.1:3001' : '';
   
-  if (isServer && !process.env.NEXT_PUBLIC_API_URL) {
+  if (isServer && !baseUrl) {
     throw new Error("API URL is not configured for server-side fetching. Please set NEXT_PUBLIC_API_URL in your .env file.");
   }
 
@@ -17,26 +17,31 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
   }
 
   if (isServer) {
-    // On the server, we must manually forward the session cookie from the
-    // browser's original request to this new outgoing API request.
-    const cookie = headers().get('cookie');
-    if (cookie) {
-      requestHeaders.set('Cookie', cookie);
+    // In Server Actions, Route Handlers, or server-side rendering,
+    // we use cookies() to get the session cookie and forward it.
+    try {
+      const cookieJar = cookies();
+      const sessionCookie = cookieJar.get('healthai_session_cookie');
+      if (sessionCookie) {
+        requestHeaders.set('Cookie', `${sessionCookie.name}=${sessionCookie.value}`);
+      }
+    } catch (error) {
+        // cookies() will throw an error if used in a context without cookies,
+        // like a static build process. We can ignore it in those cases.
+        console.log("Could not get cookies. This is normal during build.");
     }
+  } else {
+    // On the client, this tells the browser to include credentials (like cookies)
+    // for all requests, which is necessary for session-based authentication.
+    options.credentials = 'include';
   }
-  
+
   const fetchOptions: RequestInit = {
     ...options,
     headers: requestHeaders,
     // Caching server-side requests can cause stale data issues after login/logout.
     cache: 'no-store',
   };
-
-  if (!isServer) {
-    // On the client, this tells the browser to include credentials (like cookies)
-    // for all requests, which is necessary for session-based authentication.
-    fetchOptions.credentials = 'include';
-  }
 
   try {
     const response = await fetch(url, fetchOptions);
@@ -71,6 +76,10 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
   } catch (error: any) {
     // This catches network errors (e.g., "fetch failed") or errors thrown above.
+    // We add more context to the error message for better debugging.
+    if (error.cause?.code === 'ECONNREFUSED') {
+         throw new Error(`Connection to API at ${url} refused. Is the backend server running?`);
+    }
     throw error;
   }
 }

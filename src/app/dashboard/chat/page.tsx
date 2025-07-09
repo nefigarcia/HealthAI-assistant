@@ -103,11 +103,12 @@ export default function ChatPage() {
         const result = await askAssistant({ query: currentInput });
         const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
         setAdminMessages(prev => [...prev, newAssistantMessage]);
-      } catch (error) {
+      } catch (error: any) {
+        console.error("AI Assistant Error:", error);
         toast({
           variant: "destructive",
           title: "AI Assistant Error",
-          description: "An error occurred while communicating with the AI.",
+          description: error.message || "An error occurred while communicating with the AI.",
         });
       } finally {
         setIsAssistantLoading(false);
