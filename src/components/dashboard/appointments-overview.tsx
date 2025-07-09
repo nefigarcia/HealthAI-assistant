@@ -1,14 +1,48 @@
+"use client"
+
+import { useEffect, useState } from "react";
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar"
 import { Badge } from "@/components/ui/badge"
 import { Card, CardContent, CardHeader, CardTitle } from "@/components/ui/card"
 import { Table, TableBody, TableCell, TableHead, TableHeader, TableRow } from "@/components/ui/table"
-import { getAppointments } from "@/services/calendar"
+import { Skeleton } from "@/components/ui/skeleton";
+import { getAppointments, type Appointment } from "@/services/calendar"
 import { format } from "date-fns"
 
-export async function AppointmentsOverview() {
-    const today = new Date();
-    const formattedDate = format(today, 'yyyy-MM-dd');
-    const appointments = await getAppointments(formattedDate);
+export function AppointmentsOverview() {
+    const [appointments, setAppointments] = useState<Appointment[]>([]);
+    const [isLoading, setIsLoading] = useState(true);
+
+    useEffect(() => {
+        async function loadAppointments() {
+            try {
+                const today = new Date();
+                const formattedDate = format(today, 'yyyy-MM-dd');
+                const data = await getAppointments(formattedDate);
+                setAppointments(data);
+            } catch (error) {
+                console.error("Failed to fetch appointments", error);
+            } finally {
+                setIsLoading(false);
+            }
+        }
+        loadAppointments();
+    }, []);
+
+    if (isLoading) {
+        return (
+            <Card className="col-span-1 lg:col-span-2">
+                <CardHeader>
+                    <CardTitle className="font-headline">Upcoming Appointments</CardTitle>
+                </CardHeader>
+                <CardContent className="space-y-4">
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                    <Skeleton className="h-10 w-full" />
+                </CardContent>
+            </Card>
+        )
+    }
 
     if (!appointments || appointments.length === 0) {
         return (
@@ -41,8 +75,8 @@ export async function AppointmentsOverview() {
                         </TableRow>
                     </TableHeader>
                     <TableBody>
-                        {appointments.map((appointment) => (
-                            <TableRow key={`${appointment.patientName}-${appointment.time}`}>
+                        {appointments.map((appointment, index) => (
+                            <TableRow key={index}>
                                 <TableCell>
                                     <div className="flex items-center gap-3">
                                         <Avatar>
@@ -57,8 +91,8 @@ export async function AppointmentsOverview() {
                                 <TableCell>{appointment.type}</TableCell>
                                 <TableCell>{appointment.time}</TableCell>
                                 <TableCell className="text-right">
-                                    <Badge variant={"secondary"}>
-                                        Scheduled
+                                    <Badge variant={appointment.status === 'confirmed' ? 'default' : 'secondary'}>
+                                        {appointment.status.charAt(0).toUpperCase() + appointment.status.slice(1)}
                                     </Badge>
                                 </TableCell>
                             </TableRow>

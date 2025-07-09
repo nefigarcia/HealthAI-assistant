@@ -11,13 +11,20 @@ import {
   DropdownMenuSeparator,
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
-import type { CurrentUser } from "@/services/user"
 import Link from "next/link"
 import { logoutAction } from "@/app/logout/actions";
+import { useAuth } from "@/app/dashboard/layout";
+import { Skeleton } from "@/components/ui/skeleton";
 
-export function UserNav({ user }: { user: CurrentUser | null }) {
-  const name = user?.name || "Dr. Admin";
-  const email = user?.email || "admin@healthai.com";
+export function UserNav() {
+  const { user, isLoading } = useAuth();
+
+  if (isLoading || !user) {
+    return <Skeleton className="h-9 w-9 rounded-full" />
+  }
+
+  const name = user.name || "Dr. Admin";
+  const email = user.email || "admin@healthai.com";
   const initials = name?.split(' ').map(n => n[0]).join('').toUpperCase() || "DA";
 
   return (

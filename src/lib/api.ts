@@ -1,22 +1,20 @@
-'use server';
 import { headers } from 'next/headers';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
-  const API_URL = process.env.NEXT_PUBLIC_API_URL;
+  // For client-side calls, use a relative URL. For server-side, use the absolute URL.
+  const isServer = typeof window === 'undefined';
+  const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : '';
   
-  if (!API_URL) {
-    throw new Error("API URL is not configured. Please set NEXT_PUBLIC_API_URL in your .env file.");
+  if (isServer && !process.env.NEXT_PUBLIC_API_URL) {
+    throw new Error("API URL is not configured for server-side fetching. Please set NEXT_PUBLIC_API_URL in your .env file.");
   }
 
-  const url = `${API_URL}${endpoint}`;
+  const url = `${baseUrl}${endpoint}`;
   
-  // Use the standard Headers object for robust, type-safe manipulation
   const requestHeaders = new Headers(options.headers);
   if (!requestHeaders.has('Content-Type')) {
     requestHeaders.set('Content-Type', 'application/json');
   }
-
-  const isServer = typeof window === 'undefined';
 
   if (isServer) {
     // On the server, we must manually forward the session cookie from the
@@ -34,10 +32,9 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     cache: 'no-store',
   };
 
-  // On the client, the browser automatically includes cookies for requests to the same origin.
-  // For cross-origin requests, this tells the browser to include credentials (like cookies).
-  // This should only be set on the client-side.
   if (!isServer) {
+    // On the client, this tells the browser to include credentials (like cookies)
+    // for all requests, which is necessary for session-based authentication.
     fetchOptions.credentials = 'include';
   }
 
@@ -53,7 +50,6 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
     if (!response.ok) {
         let errorMessage = `API request failed with status ${response.status}`;
-        // Try to parse a more specific error message from the backend response.
         if (text) {
             try {
                 const errorJson = JSON.parse(text);
@@ -63,20 +59,18 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
                 errorMessage = `${errorMessage}: ${text}`;
             }
         }
+        // Throw the specific error message from the backend.
         throw new Error(errorMessage);
     }
     
-    // Handle successful responses that have an empty body.
     if (!text) {
         return { success: true };
     }
     
-    // If we get here, the response is OK and has a JSON body.
     return JSON.parse(text);
 
   } catch (error: any) {
     // This catches network errors (e.g., "fetch failed") or errors thrown above.
-    // We re-throw it so the calling function can handle it.
-    throw new Error(error.message || 'An unknown API error occurred.');
+    throw error;
   }
 }
