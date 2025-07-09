@@ -10,18 +10,11 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
 
   const url = `${API_URL}${endpoint}`;
   
-  const requestHeaders: HeadersInit = {
-    'Content-Type': 'application/json',
-    ...options.headers,
-  };
-
-  const fetchOptions: RequestInit = {
-    ...options,
-    headers: requestHeaders,
-    // Caching server-side requests can cause stale data issues after login/logout.
-    // 'no-store' ensures we always get the freshest data for the user.
-    cache: 'no-store',
-  };
+  // Use the standard Headers object for robust, type-safe manipulation
+  const requestHeaders = new Headers(options.headers);
+  if (!requestHeaders.has('Content-Type')) {
+    requestHeaders.set('Content-Type', 'application/json');
+  }
 
   const isServer = typeof window === 'undefined';
 
@@ -30,40 +23,60 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     // browser's original request to this new outgoing API request.
     const cookie = headers().get('cookie');
     if (cookie) {
-      requestHeaders['Cookie'] = cookie;
+      requestHeaders.set('Cookie', cookie);
     }
-  } else {
-    // On the client, we tell the browser to automatically include cookies.
-    // Your backend's CORS setup (`Access-Control-Allow-Credentials: true`) permits this.
+  }
+  
+  const fetchOptions: RequestInit = {
+    ...options,
+    headers: requestHeaders,
+    // Caching server-side requests can cause stale data issues after login/logout.
+    cache: 'no-store',
+  };
+
+  // On the client, the browser automatically includes cookies for requests to the same origin.
+  // For cross-origin requests, this tells the browser to include credentials (like cookies).
+  // This should only be set on the client-side.
+  if (!isServer) {
     fetchOptions.credentials = 'include';
   }
 
-  const response = await fetch(url, fetchOptions);
-
-  // Handle successful responses that don't have a body.
-  if (response.status === 204) {
-    return { success: true };
-  }
-
-  // If the response is not OK, we need to create a proper error.
-  if (!response.ok) {
-    let errorMessage = `API request failed with status ${response.status}`;
-    try {
-      // Try to parse a JSON error body from the backend, which is common.
-      const errorData = await response.json();
-      errorMessage = errorData.message || errorMessage;
-    } catch (e) {
-      // The error response was not JSON. The status code is the best info we have.
-    }
-    throw new Error(errorMessage);
-  }
-  
-  // If the response is OK but has no content, return success.
-  const text = await response.text();
-  if (!text) {
+  try {
+    const response = await fetch(url, fetchOptions);
+    
+    // Handle successful responses that don't have a body (e.g., logout).
+    if (response.status === 204) {
       return { success: true };
+    }
+
+    const text = await response.text();
+
+    if (!response.ok) {
+        let errorMessage = `API request failed with status ${response.status}`;
+        // Try to parse a more specific error message from the backend response.
+        if (text) {
+            try {
+                const errorJson = JSON.parse(text);
+                errorMessage = errorJson.message || errorMessage;
+            } catch (e) {
+                // The error response wasn't JSON, but the text might be useful.
+                errorMessage = `${errorMessage}: ${text}`;
+            }
+        }
+        throw new Error(errorMessage);
+    }
+    
+    // Handle successful responses that have an empty body.
+    if (!text) {
+        return { success: true };
+    }
+    
+    // If we get here, the response is OK and has a JSON body.
+    return JSON.parse(text);
+
+  } catch (error: any) {
+    // This catches network errors (e.g., "fetch failed") or errors thrown above.
+    // We re-throw it so the calling function can handle it.
+    throw new Error(error.message || 'An unknown API error occurred.');
   }
-  
-  // If we got here, the response is OK and has a JSON body.
-  return JSON.parse(text);
 }
