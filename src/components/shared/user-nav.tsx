@@ -17,11 +17,10 @@ import { useAuth } from "@/app/dashboard/layout";
 import { Skeleton } from "@/components/ui/skeleton";
 
 export function UserNav() {
-  const { user, isLoading } = useAuth();
+  const { user } = useAuth();
 
-  // The main layout already shows a loading screen. By the time this component
-  // renders, if the user is still null, it's safe to assume they are not logged in
-  // or there was an error. We can show a skeleton as a fallback.
+  // By the time this component renders, the DashboardView parent has already handled
+  // the main loading state. If user is still null here, it's an error state.
   if (!user) {
     return <Skeleton className="h-9 w-9 rounded-full" />
   }

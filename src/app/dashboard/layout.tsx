@@ -58,30 +58,26 @@ export const useAuth = () => {
 
 function DashboardView({ children }: { children: React.ReactNode }) {
     const { user, isLoading } = useAuth();
-    const clinicName = user?.clinic?.name || "HealthAI Assist";
-
+    
     if (isLoading) {
         return (
-            <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
-                <div className="hidden border-r bg-card md:block p-4 space-y-4">
-                    <Skeleton className="h-14" />
-                    <Skeleton className="h-10" />
-                    <Skeleton className="h-10" />
-                    <Skeleton className="h-10" />
-                </div>
-                <div className="flex flex-col">
-                     <header className="flex h-14 items-center gap-4 border-b bg-card px-4 lg:h-[60px] lg:px-6">
-                        <div className="w-full flex-1"></div>
-                        <Skeleton className="h-8 w-8 rounded-full" />
-                    </header>
-                    <main className="flex flex-1 flex-col items-center justify-center gap-4 p-4 lg:gap-6 lg:p-6 bg-background">
-                         <Loader2 className="h-8 w-8 animate-spin text-primary" />
-                         <p className="text-muted-foreground">Loading Dashboard...</p>
-                    </main>
-                </div>
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 lg:gap-6 lg:p-6 bg-background h-screen">
+                 <Loader2 className="h-8 w-8 animate-spin text-primary" />
+                 <p className="text-muted-foreground">Loading Dashboard...</p>
             </div>
         )
     }
+
+    if (!user) {
+         return (
+            <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 lg:gap-6 lg:p-6 bg-background h-screen">
+                 <p className="text-destructive-foreground">Could not load user data. Please try logging in again.</p>
+                 <Button asChild><Link href="/login">Go to Login</Link></Button>
+            </div>
+        )
+    }
+
+    const clinicName = user?.clinic?.name || "HealthAI Assist";
 
     return (
         <div className="grid min-h-screen w-full md:grid-cols-[220px_1fr] lg:grid-cols-[280px_1fr]">
