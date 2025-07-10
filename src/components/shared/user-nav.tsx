@@ -19,7 +19,10 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function UserNav() {
   const { user, isLoading } = useAuth();
 
-  if (isLoading || !user) {
+  // The main layout already shows a loading screen. By the time this component
+  // renders, if the user is still null, it's safe to assume they are not logged in
+  // or there was an error. We can show a skeleton as a fallback.
+  if (!user) {
     return <Skeleton className="h-9 w-9 rounded-full" />
   }
 
