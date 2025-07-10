@@ -19,8 +19,6 @@ import { Skeleton } from "@/components/ui/skeleton";
 export function UserNav() {
   const { user } = useAuth();
 
-  // By the time this component renders, the DashboardView parent has already handled
-  // the main loading state. If user is still null here, it's an error state.
   if (!user) {
     return <Skeleton className="h-9 w-9 rounded-full" />
   }

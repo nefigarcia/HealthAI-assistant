@@ -32,7 +32,6 @@ export function AuthProvider({ children }: { children: React.ReactNode }) {
                 setUser(currentUser);
             } catch (err: any) {
                 setError(err);
-                // Handle redirect or error display if needed, e.g., redirect to /login
             } finally {
                 setIsLoading(false);
             }
@@ -71,7 +70,7 @@ function DashboardView({ children }: { children: React.ReactNode }) {
     if (!user) {
          return (
             <div className="flex flex-1 flex-col items-center justify-center gap-4 p-4 lg:gap-6 lg:p-6 bg-background h-screen">
-                 <p className="text-destructive-foreground">Could not load user data. Please try logging in again.</p>
+                 <p className="text-destructive">Could not load user data. Please try logging in again.</p>
                  <Button asChild><Link href="/login">Go to Login</Link></Button>
             </div>
         )
