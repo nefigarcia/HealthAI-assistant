@@ -16,6 +16,7 @@ export async function getCurrentUser(): Promise<CurrentUser | null> {
     try {
         // Assuming a new endpoint `/users/me` that returns the logged-in user's data.
         const user = await apiFetch('/users/me');
+        console.log("Fetched current user:", user);
         return user;
     } catch (error) {
         console.error("Failed to fetch current user:", error);

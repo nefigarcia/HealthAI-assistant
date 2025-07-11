@@ -37,7 +37,7 @@ export default function LoginPage() {
     setIsLoading(true);
     const result = await loginAction(values.email, values.password);
     setIsLoading(false);
-
+console.log("Login result:", result);
     if (result.success) {
       toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
       router.push('/dashboard');

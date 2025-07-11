@@ -8,11 +8,13 @@ export interface AuthResponse {
 }
 
 export async function login(email: string, password: string): Promise<AuthResponse> {
-    try {
+    
         // The API now sets a session cookie, so we just need to check for success.
-        const responseData = await apiFetch('/login', {
+        const responseData = await apiFetch('/loginn', {
             method: 'POST',
             body: JSON.stringify({ email: email, contrasena: password }),
+            headers: {
+                'Content-Type': 'application/json', },
         });
         
         if (!responseData || !responseData.success) {
@@ -23,11 +25,7 @@ export async function login(email: string, password: string): Promise<AuthRespon
             success: true,
             message: responseData.message
         };
-    } catch (error: any) {
-        // The error message from apiFetch is already generic enough.
-        // We can use it directly.
-        return { success: false, message: error.message };
-    }
+   
 }
 
 export async function logout(): Promise<AuthResponse> {
