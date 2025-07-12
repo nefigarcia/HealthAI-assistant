@@ -1,11 +1,12 @@
-'use server';
 
 import { apiFetch } from "@/lib/api";
 
 export interface CurrentUser {
+    id: string;
     name: string;
     email: string;
     clinic: {
+        id: string;
         name: string;
     };
 }
