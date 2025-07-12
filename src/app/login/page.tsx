@@ -12,8 +12,8 @@ import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from '@/hooks/use-toast';
-import { loginAction } from './actions';
 import { Loader2 } from 'lucide-react';
+import { apiFetch } from '@/lib/api';
 
 const formSchema = z.object({
   email: z.string().email({ message: "Please enter a valid email." }),
@@ -35,14 +35,22 @@ export default function LoginPage() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await loginAction(values.email, values.password);
-    setIsLoading(false);
-
-    if (result.success) {
-      toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
-      router.push('/dashboard');
-    } else {
-      toast({ variant: "destructive", title: "Login Failed", description: result.message });
+    try {
+        const result = await apiFetch('/login', {
+            method: 'POST',
+            body: JSON.stringify({ email: values.email, contrasena: values.password }),
+        });
+        
+        if (result.success) {
+            toast({ title: "Login Successful", description: "Redirecting to your dashboard..." });
+            router.push('/dashboard');
+        } else {
+             toast({ variant: "destructive", title: "Login Failed", description: result.message });
+        }
+    } catch (error: any) {
+        toast({ variant: "destructive", title: "Login Failed", description: error.message });
+    } finally {
+        setIsLoading(false);
     }
   }
 

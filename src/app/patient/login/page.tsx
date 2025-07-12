@@ -8,9 +8,9 @@ import { Input } from "@/components/ui/input";
 import { Label } from "@/components/ui/label";
 import { Icons } from "@/components/icons";
 import { useToast } from "@/hooks/use-toast";
-import { validatePatientAction } from './actions';
 import { Loader2 } from 'lucide-react';
 import Link from 'next/link';
+import { apiFetch } from '@/lib/api';
 
 export default function PatientLoginPage() {
     const router = useRouter();
@@ -21,12 +21,21 @@ export default function PatientLoginPage() {
 
     const handleValidation = async () => {
         setIsLoading(true);
-        const result = await validatePatientAction(name, dob);
-        if (result.success) {
-            toast({ title: "Success", description: "Redirecting to your dashboard..." });
-            router.push('/patient/dashboard');
-        } else {
-            toast({ variant: "destructive", title: "Validation Failed", description: result.message });
+        try {
+            const result = await apiFetch('/patients/validate', {
+                method: 'POST',
+                body: JSON.stringify({ name, dob }),
+            });
+            
+            if (result) {
+                toast({ title: "Success", description: "Redirecting to your dashboard..." });
+                router.push('/patient/dashboard');
+            } else {
+                 toast({ variant: "destructive", title: "Validation Failed", description: 'Invalid name or date of birth. Please try again.' });
+            }
+        } catch(error: any) {
+            toast({ variant: "destructive", title: "Validation Failed", description: error.message });
+        } finally {
             setIsLoading(false);
         }
     };

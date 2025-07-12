@@ -8,9 +8,16 @@ import { Dialog, DialogContent, DialogDescription, DialogFooter, DialogHeader, D
 import { Input } from "@/components/ui/input"
 import { Label } from "@/components/ui/label"
 import { PlusCircle, Loader2 } from "lucide-react"
-import { addAppointment, getAppointments } from "./actions"
-import type { Appointment } from "@/services/calendar"
 import { useToast } from "@/hooks/use-toast"
+import { apiFetch } from "@/lib/api"
+import type { Appointment } from "@/services/calendar"
+
+function formatDate(date: Date): string {
+    const year = date.getFullYear();
+    const month = (date.getMonth() + 1).toString().padStart(2, '0');
+    const day = date.getDate().toString().padStart(2, '0');
+    return `${year}-${month}-${day}`;
+}
 
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date())
@@ -22,18 +29,18 @@ export default function CalendarPage() {
   
   const { toast } = useToast()
 
-  const fetchAppointments = () => {
+  const fetchAppointments = async () => {
     if (date) {
       setIsLoading(true);
-      getAppointments(date)
-        .then(data => {
-          setAppointments(data);
-          setIsLoading(false);
-        })
-        .catch(() => {
-          setIsLoading(false);
-          toast({ variant: "destructive", title: "Error", description: "Could not fetch appointments."})
-        });
+      try {
+        const formattedDate = formatDate(date);
+        const data = await apiFetch(`/calendar/appointments?date=${formattedDate}`);
+        setAppointments(data || []);
+      } catch (error) {
+        toast({ variant: "destructive", title: "Error", description: "Could not fetch appointments."})
+      } finally {
+        setIsLoading(false);
+      }
     }
   }
 
@@ -46,14 +53,29 @@ export default function CalendarPage() {
         toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all fields."})
         return;
     }
-    const result = await addAppointment(newAppointment.patientName, date, newAppointment.time, newAppointment.type);
-    if (result.success) {
-        toast({ title: "Success", description: result.message });
-        fetchAppointments(); // Refresh appointments list
-        setIsDialogOpen(false); // Close dialog
-        setNewAppointment({ patientName: '', type: '', time: '' }); // Reset form
-    } else {
-        toast({ variant: "destructive", title: "Error", description: result.message });
+    
+    try {
+        const formattedDate = formatDate(date);
+        const result = await apiFetch('/calendar/appointments', {
+            method: 'POST',
+            body: JSON.stringify({ 
+                patientName: newAppointment.patientName, 
+                date: formattedDate, 
+                time: newAppointment.time, 
+                type: newAppointment.type 
+            }),
+        });
+        
+        if (result.success) {
+            toast({ title: "Success", description: result.message });
+            fetchAppointments(); // Refresh appointments list
+            setIsDialogOpen(false); // Close dialog
+            setNewAppointment({ patientName: '', type: '', time: '' }); // Reset form
+        } else {
+            toast({ variant: "destructive", title: "Error", description: result.message });
+        }
+    } catch (error: any) {
+         toast({ variant: "destructive", title: "Error", description: error.message });
     }
   }
 

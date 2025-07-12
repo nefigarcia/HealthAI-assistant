@@ -12,15 +12,30 @@ import {
   DropdownMenuTrigger,
 } from "@/components/ui/dropdown-menu"
 import Link from "next/link"
-import { logoutAction } from "@/app/logout/actions";
 import { useAuth } from "@/app/dashboard/layout";
 import { Skeleton } from "@/components/ui/skeleton";
+import { apiFetch } from "@/lib/api";
+import { useRouter } from "next/navigation";
 
 export function UserNav() {
-  const { user } = useAuth();
+  const { user, isLoading } = useAuth();
+  const router = useRouter();
+
+  const handleLogout = async () => {
+    await apiFetch('/logout', { method: 'POST' });
+    router.push('/login');
+  };
+
+  if (isLoading) {
+    return <Skeleton className="h-9 w-9 rounded-full" />;
+  }
 
   if (!user) {
-    return <Skeleton className="h-9 w-9 rounded-full" />
+    return (
+       <Button variant="ghost" asChild>
+            <Link href="/login">Login</Link>
+        </Button>
+    )
   }
 
   const name = user.name || "Dr. Admin";
@@ -59,13 +74,9 @@ export function UserNav() {
           </DropdownMenuItem>
         </DropdownMenuGroup>
         <DropdownMenuSeparator />
-        <form action={logoutAction}>
-            <button type="submit" className="w-full">
-                <DropdownMenuItem>
-                    Log out
-                </DropdownMenuItem>
-            </button>
-        </form>
+         <DropdownMenuItem onClick={handleLogout} className="cursor-pointer">
+            Log out
+        </DropdownMenuItem>
       </DropdownMenuContent>
     </DropdownMenu>
   )

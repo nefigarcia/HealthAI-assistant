@@ -7,9 +7,9 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { askAssistantAction } from "./actions"; // Updated import
 import { Bot, Sparkles, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
+import { apiFetch } from "@/lib/api";
 
 type Message = {
   id: number;
@@ -100,8 +100,10 @@ export default function ChatPage() {
       setIsAssistantLoading(true);
 
       try {
-        // Updated to call the new server action
-        const result = await askAssistantAction(currentInput);
+        const result = await apiFetch('/api/assistant', {
+          method: 'POST',
+          body: JSON.stringify({ query: currentInput }),
+        });
         const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
         setAdminMessages(prev => [...prev, newAssistantMessage]);
       } catch (error: any) {

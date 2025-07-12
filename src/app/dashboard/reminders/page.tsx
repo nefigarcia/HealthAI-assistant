@@ -11,8 +11,8 @@ import { Input } from "@/components/ui/input";
 import { RadioGroup, RadioGroupItem } from "@/components/ui/radio-group";
 import { Textarea } from "@/components/ui/textarea";
 import { useToast } from "@/hooks/use-toast";
-import { personalizeReminderMessage, PersonalizeReminderMessageInput } from "@/ai/flows/reminder-message-personalization";
 import { Sparkles, Loader2 } from "lucide-react";
+import { apiFetch } from "@/lib/api";
 
 const formSchema = z.object({
   patientName: z.string().min(2, { message: "Patient name is required." }),
@@ -44,13 +44,16 @@ export default function RemindersPage() {
     setIsLoading(true);
     setGeneratedMessage("");
     try {
-      const result = await personalizeReminderMessage(values as PersonalizeReminderMessageInput);
+      const result = await apiFetch('/api/personalize-reminder', {
+          method: 'POST',
+          body: JSON.stringify(values),
+      });
       setGeneratedMessage(result.message);
-    } catch (error) {
+    } catch (error: any) {
       toast({
         variant: "destructive",
         title: "Failed to generate message",
-        description: "An error occurred while communicating with the AI.",
+        description: error.message || "An error occurred while communicating with the AI.",
       });
     } finally {
       setIsLoading(false);

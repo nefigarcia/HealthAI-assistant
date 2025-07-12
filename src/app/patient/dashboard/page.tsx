@@ -7,13 +7,12 @@ import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle }
 import { Input } from "@/components/ui/input";
 import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
-import { askPatientAssistant } from "@/ai/flows/patient-assistant";
-import { Bot, Sparkles, Send, Loader2, Calendar, User, Mail } from "lucide-react";
+import { Bot, Sparkles, Send, Loader2, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
 import type { Patient } from "@/services/patients";
 import type { Appointment } from "@/services/calendar";
-import { getPatientDetailsAction, getPatientAppointmentsAction } from "./actions";
 import { format } from 'date-fns';
+import { apiFetch } from "@/lib/api";
 
 type Message = {
   id: number;
@@ -34,13 +33,29 @@ export default function PatientDashboardPage() {
   
   const { toast } = useToast();
 
+  const fetchPatientAppointments = async () => {
+    try {
+        const encodedPatientName = encodeURIComponent(PATIENT_NAME);
+        const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
+        setAppointments(patientAppointments || []);
+    } catch(error) {
+         toast({
+          variant: "destructive",
+          title: "Error",
+          description: "Could not fetch patient appointments.",
+        });
+    }
+  }
+
   useEffect(() => {
     async function fetchData() {
       try {
-        const patientDetails = await getPatientDetailsAction(PATIENT_NAME);
-        setPatient(patientDetails);
-        const patientAppointments = await getPatientAppointmentsAction(PATIENT_NAME);
-        setAppointments(patientAppointments);
+        const patients = await apiFetch(`/patients?name=${encodeURIComponent(PATIENT_NAME)}`);
+        const exactMatch = patients.find((p: Patient) => p.name.toLowerCase() === PATIENT_NAME.toLowerCase());
+        setPatient(exactMatch || null);
+        
+        await fetchPatientAppointments();
+
       } catch (error) {
         toast({
           variant: "destructive",
@@ -61,19 +76,22 @@ export default function PatientDashboardPage() {
       setIsLoading(true);
 
       try {
-        const result = await askPatientAssistant({ query: currentInput, patientName: PATIENT_NAME });
+        const result = await apiFetch('/api/patient-assistant', {
+            method: 'POST',
+            body: JSON.stringify({ query: currentInput, patientName: PATIENT_NAME }),
+        });
         const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
         setMessages(prev => [...prev, newAssistantMessage]);
-      } catch (error) {
+      } catch (error: any) {
         toast({
           variant: "destructive",
           title: "AI Assistant Error",
-          description: "An error occurred while communicating with the AI.",
+          description: error.message || "An error occurred while communicating with the AI.",
         });
       } finally {
         setIsLoading(false);
         // Refresh appointments after AI interaction
-        getPatientAppointmentsAction(PATIENT_NAME).then(setAppointments);
+        fetchPatientAppointments();
       }
     }
   };

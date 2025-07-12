@@ -12,9 +12,9 @@ import { Input } from "@/components/ui/input";
 import { Icons } from "@/components/icons";
 import { Form, FormControl, FormField, FormItem, FormLabel, FormMessage } from "@/components/ui/form";
 import { useToast } from "@/hooks/use-toast";
-import { registerAction } from "./actions";
 import { Loader2 } from "lucide-react";
 import { useState, useEffect } from "react";
+import { apiFetch } from '@/lib/api';
 
 const formSchema = z.object({
   fullName: z.string().min(2, { message: "Full name is required." }),
@@ -53,14 +53,49 @@ function RegisterForm() {
 
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
-    const result = await registerAction(values);
-    setIsLoading(false);
 
-    if (result.success) {
-      toast({ title: "Account Created", description: "Redirecting to your dashboard..." });
-      router.push('/dashboard');
-    } else {
-      toast({ variant: "destructive", title: "Registration Failed", description: result.message });
+    const nameParts = values.fullName.split(' ');
+    const firstName = nameParts[0];
+    const lastName = nameParts.slice(1).join(' ');
+
+    const apiPayload = {
+        clinic: {
+            name: values.clinicName,
+            subscription_plan: values.plan,
+        },
+        account: {
+            NOMBRE: firstName,
+            APELLIDOS: lastName || '',
+            EMAIL: values.email,
+            CONTRASENA: values.password,
+            TELEFONO: values.phone,
+            ID_ESCUELA: 0,
+            TALLER_ID: 0,
+            ROLES_ID: 1,
+            APP: 'HealthAI Assist',
+        },
+        subscription: {
+            plan_type: values.plan,
+            status: 'trial',
+        }
+    };
+
+    try {
+        const result = await apiFetch('/register-clinic', {
+            method: 'POST',
+            body: JSON.stringify(apiPayload),
+        });
+
+        if (result.success) {
+            toast({ title: "Account Created", description: "Redirecting to your dashboard..." });
+            router.push('/dashboard');
+        } else {
+            toast({ variant: "destructive", title: "Registration Failed", description: result.message });
+        }
+    } catch (error: any) {
+         toast({ variant: "destructive", title: "Registration Failed", description: error.message });
+    } finally {
+        setIsLoading(false);
     }
   }
 
