@@ -3,7 +3,7 @@ import type { cookies } from 'next/headers';
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
   // Determine the base URL. For client-side, it's relative. For server-side, it's absolute.
   const isServer = typeof window === 'undefined';
-  const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : '';
+  const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : process.env.NEXT_PUBLIC_API_URL;
   
  
   const url = `${baseUrl}${endpoint}`;
