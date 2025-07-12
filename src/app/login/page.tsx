@@ -36,7 +36,7 @@ export default function LoginPage() {
   async function onSubmit(values: z.infer<typeof formSchema>) {
     setIsLoading(true);
     try {
-        const result = await apiFetch('/login', {
+        const result = await apiFetch('/loginn', {
             method: 'POST',
             body: JSON.stringify({ email: values.email, contrasena: values.password }),
         });

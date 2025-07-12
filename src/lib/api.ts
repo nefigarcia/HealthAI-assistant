@@ -2,16 +2,17 @@
 // It's configured to work for both client-side and server-side rendering,
 // and it automatically handles authentication cookies.
 
+import { Console } from 'console';
 import type { cookies } from 'next/headers';
 
 export async function apiFetch(endpoint: string, options: RequestInit = {}): Promise<any> {
   // Determine the base URL. For client-side, it's relative. For server-side, it's absolute.
   const isServer = typeof window === 'undefined';
   // When running locally, the backend is on port 3001.
-  const baseUrl = isServer ? 'http://127.0.0.1:3001' : '';
+  const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : process.env.NEXT_PUBLIC_API_URL;
   
   const url = `${baseUrl}${endpoint}`;
-  
+  console.log(`API Fetching: ${url} (isServer: ${isServer})`);
   // Use the modern Headers object for type safety and correct manipulation.
   const requestHeaders = new Headers(options.headers);
   if (!requestHeaders.has('Content-Type')) {
@@ -25,7 +26,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     // we must dynamically import `cookies` from Next.js and forward the session cookie.
     try {
       const { cookies: nextCookies } = await import('next/headers');
-      const cookie = nextCookies().get('healthai_session_cookie');
+      const cookie = (await nextCookies()).get('healthai_session_cookie');
       if (cookie) {
         requestHeaders.set('Cookie', `${cookie.name}=${cookie.value}`);
       }
