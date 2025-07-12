@@ -15,7 +15,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
    
 // --- Start of Authentication Handling ---
 
-  if (isServer) {
+ /* if (isServer) {
    // If the code is running on the server (e.g., in a Genkit tool),
     // we must dynamically import `cookies` from Next.js and forward the session cookie.
     try {
@@ -35,8 +35,9 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     // On the client, this tells the browser to include credentials (like cookies)
     // for all requests, which is necessary for session-based authentication.
     options.credentials = 'include';
-    }
-  
+    }*/
+  options.credentials = 'include';
+// --- End of Authentication Handling ---
   const fetchOptions: RequestInit = {
     ...options,
     headers: requestHeaders,
