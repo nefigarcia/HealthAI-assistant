@@ -9,6 +9,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
   // Determine the base URL. For client-side, it's relative. For server-side, it's absolute.
   const isServer = typeof window === 'undefined';
   // When running locally, the backend is on port 3001.
+  console.log("API Fetch called with endpoint:", isServer, endpoint);
   const baseUrl = isServer ? process.env.NEXT_PUBLIC_API_URL : process.env.NEXT_PUBLIC_API_URL;
   
   const url = `${baseUrl}${endpoint}`;
@@ -27,6 +28,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     try {
       const { cookies: nextCookies } = await import('next/headers');
       const cookie = (await nextCookies()).get('healthai_session_cookie');
+      console.log("Server-side cookie:", cookie);
       if (cookie) {
         requestHeaders.set('Cookie', `${cookie.name}=${cookie.value}`);
       }
@@ -40,6 +42,7 @@ export async function apiFetch(endpoint: string, options: RequestInit = {}): Pro
     // to automatically include credentials (like cookies) in the request.
     // This is crucial for authenticating client-side data fetches.
     options.credentials = 'include';
+    console.log("Client-side fetch with credentials included.", options.credentials);  
   }
   
   // --- End of Authentication Handling ---

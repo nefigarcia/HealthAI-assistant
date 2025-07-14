@@ -4,10 +4,11 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, MessageSquare, Calendar, Bell, Settings } from "lucide-react"
+import { LayoutDashboard, MessageSquare, Calendar, Bell, Settings, Users } from "lucide-react"
 
 const links = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
+    { href: "/dashboard/patients", label: "Patients", icon: Users },
     { href: "/dashboard/chat", label: "AI Chat", icon: MessageSquare },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/reminders", label: "Reminders", icon: Bell },
@@ -23,7 +24,7 @@ export function SidebarNav() {
                     <Button
                         key={link.href}
                         asChild
-                        variant={pathname === link.href ? "secondary" : "ghost"}
+                        variant={pathname.startsWith(link.href) && (link.href !== "/dashboard" || pathname === "/dashboard") ? "secondary" : "ghost"}
                         className="w-full justify-start"
                     >
                         <Link href={link.href}>
