@@ -7,7 +7,7 @@ export interface Patient {
     email: string;
     phone?: string;
     avatar: string; // just the initials
-    dob: string; // YYYY-MM-DD
+    dob?: string; // YYYY-MM-DD
 }
 
 export async function getPatients(name?: string): Promise<Patient[]> {

@@ -3,8 +3,7 @@ import { apiFetch } from "@/lib/api";
 
 export interface Appointment {
   patientName: string;
-  date: string; // YYYY-MM-DD
-  time: string; // HH:mm
+  datetime: string; // ISO 8601 format (e.g., "2024-08-15T14:30:00.000Z")
   type: string;
   status: 'confirmed' | 'pending' | 'cancelled';
 }

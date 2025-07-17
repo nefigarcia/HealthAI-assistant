@@ -22,12 +22,13 @@ export default function PatientLoginPage() {
     const handleValidation = async () => {
         setIsLoading(true);
         try {
-            const result = await apiFetch('/patients/validate', {
+            const patientData = await apiFetch('/patients/validate', {
                 method: 'POST',
                 body: JSON.stringify({ name, dob }),
             });
             
-            if (result) {
+            if (patientData && patientData.id) {
+                sessionStorage.setItem('currentPatient', JSON.stringify(patientData));
                 toast({ title: "Success", description: "Redirecting to your dashboard..." });
                 router.push('/patient/dashboard');
             } else {

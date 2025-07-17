@@ -1,6 +1,7 @@
 "use client";
 
 import { useState, useEffect } from "react";
+import { usePatientAuth } from './layout'; // Import the hook from the layout
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
 import { Card, CardContent, CardDescription, CardFooter, CardHeader, CardTitle } from "@/components/ui/card";
@@ -9,7 +10,6 @@ import { ScrollArea } from "@/components/ui/scroll-area";
 import { useToast } from "@/hooks/use-toast";
 import { Bot, Sparkles, Send, Loader2, Calendar } from "lucide-react";
 import { cn } from "@/lib/utils";
-import type { Patient } from "@/services/patients";
 import type { Appointment } from "@/services/calendar";
 import { format } from 'date-fns';
 import { apiFetch } from "@/lib/api";
@@ -20,56 +20,43 @@ type Message = {
   text: string;
 };
 
-const PATIENT_NAME = "Sarah Lee";
-
 export default function PatientDashboardPage() {
-  const [patient, setPatient] = useState<Patient | null>(null);
+  const { patient } = usePatientAuth(); // Use the hook to get patient data
   const [appointments, setAppointments] = useState<Appointment[]>([]);
-  const [messages, setMessages] = useState<Message[]>([
-    { id: 1, sender: "assistant", text: `Hello ${PATIENT_NAME}! How can I help you with your appointments today?` },
-  ]);
+  const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
   const [isLoading, setIsLoading] = useState(false);
   
   const { toast } = useToast();
 
-  const fetchPatientAppointments = async () => {
-    try {
-        const encodedPatientName = encodeURIComponent(PATIENT_NAME);
-        const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
-        setAppointments(patientAppointments || []);
-    } catch(error) {
-         toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not fetch patient appointments.",
-        });
-    }
-  }
-
   useEffect(() => {
-    async function fetchData() {
-      try {
-        const patients = await apiFetch(`/patients?name=${encodeURIComponent(PATIENT_NAME)}`);
-        const exactMatch = patients.find((p: Patient) => p.name.toLowerCase() === PATIENT_NAME.toLowerCase());
-        setPatient(exactMatch || null);
-        
-        await fetchPatientAppointments();
-
-      } catch (error) {
-        toast({
-          variant: "destructive",
-          title: "Error",
-          description: "Could not fetch patient details.",
-        });
+    if (patient) {
+      // Set initial message once patient data is available
+      setMessages([
+        { id: 1, sender: "assistant", text: `Hello ${patient.name}! How can I help you with your appointments today?` }
+      ]);
+      
+      const fetchPatientAppointments = async () => {
+        try {
+            const encodedPatientName = encodeURIComponent(patient.name);
+            const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
+            setAppointments(patientAppointments || []);
+        } catch(error) {
+             toast({
+              variant: "destructive",
+              title: "Error",
+              description: "Could not fetch patient appointments.",
+            });
+        }
       }
+      fetchPatientAppointments();
     }
-    fetchData();
-  }, []);
+  }, [patient, toast]);
 
   const handleSendMessage = async () => {
-    if (input.trim()) {
+    if (input.trim() && patient) {
       const newUserMessage: Message = { id: Date.now(), sender: "user", text: input };
+      const currentMessages = [...messages, newUserMessage];
       setMessages(prev => [...prev, newUserMessage]);
       const currentInput = input;
       setInput("");
@@ -78,7 +65,7 @@ export default function PatientDashboardPage() {
       try {
         const result = await apiFetch('/api/patient-assistant', {
             method: 'POST',
-            body: JSON.stringify({ query: currentInput, patientName: PATIENT_NAME }),
+            body: JSON.stringify({ query: currentInput, patientName: patient.name, messages: currentMessages.map(m=>({sender: m.sender, text: m.text})) }),
         });
         const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
         setMessages(prev => [...prev, newAssistantMessage]);
@@ -91,11 +78,13 @@ export default function PatientDashboardPage() {
       } finally {
         setIsLoading(false);
         // Refresh appointments after AI interaction
-        fetchPatientAppointments();
+         const encodedPatientName = encodeURIComponent(patient.name);
+         const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
+         setAppointments(patientAppointments || []);
       }
     }
   };
-
+  const initials = patient?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'P';
   return (
     <div className="grid gap-8 md:grid-cols-3">
       <div className="md:col-span-1 space-y-8">
@@ -103,7 +92,7 @@ export default function PatientDashboardPage() {
           <CardHeader className="flex flex-col items-center text-center">
             <Avatar className="h-24 w-24 mb-4">
               <AvatarImage src="https://placehold.co/400x400.png" alt={patient?.name} data-ai-hint="person portrait" />
-              <AvatarFallback>{patient?.avatar}</AvatarFallback>
+              <AvatarFallback>{initials}</AvatarFallback>
             </Avatar>
             <CardTitle className="font-headline text-2xl">{patient?.name}</CardTitle>
             <CardDescription>{patient?.email}</CardDescription>
@@ -122,7 +111,7 @@ export default function PatientDashboardPage() {
                             <div className="flex-grow">
                                 <p className="font-semibold">{app.type}</p>
                                 <p className="text-sm text-muted-foreground">
-                                    {format(new Date(app.date), 'EEEE, MMMM d, yyyy')} at {app.time}
+                                    {format(new Date(app.datetime), "EEEE, MMMM d, yyyy 'at' h:mm a")}
                                 </p>
                             </div>
                         </div>
@@ -151,7 +140,7 @@ export default function PatientDashboardPage() {
                     <div className={cn("rounded-lg px-4 py-2 max-w-[80%]", message.sender === 'user' ? 'bg-primary text-primary-foreground' : 'bg-muted')}>
                         {message.text}
                     </div>
-                    {message.sender === 'user' && <Avatar className="h-8 w-8"><AvatarFallback>{patient?.avatar}</AvatarFallback></Avatar>}
+                    {message.sender === 'user' && <Avatar className="h-8 w-8"><AvatarFallback>{initials}</AvatarFallback></Avatar>}
                     </div>
                 ))}
                 {isLoading && (
@@ -171,9 +160,9 @@ export default function PatientDashboardPage() {
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
                     placeholder="Ask about your appointments..."
-                    disabled={isLoading}
+                    disabled={isLoading || !patient}
                 />
-                <Button onClick={handleSendMessage} disabled={isLoading}>
+                <Button onClick={handleSendMessage} disabled={isLoading || !patient}>
                     {isLoading ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}
                 </Button>
                 </div>

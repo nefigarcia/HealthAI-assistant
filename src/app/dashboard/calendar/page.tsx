@@ -11,22 +11,41 @@ import { PlusCircle, Loader2 } from "lucide-react"
 import { useToast } from "@/hooks/use-toast"
 import { apiFetch } from "@/lib/api"
 import type { Appointment } from "@/services/calendar"
+import { getPatients, type Patient } from "@/services/patients"
+import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
+import { format } from 'date-fns';
+
 
 function formatDate(date: Date): string {
-    const year = date.getFullYear();
-    const month = (date.getMonth() + 1).toString().padStart(2, '0');
-    const day = date.getDate().toString().padStart(2, '0');
-    return `${year}-${month}-${day}`;
+    return format(date, 'yyyy-MM-dd');
 }
-
+function formatTime(datetimeString: string): string {
+    console.log("datetimeformat",datetimeString)
+    if (!datetimeString) return '';
+    const date = new Date(datetimeString);
+    if (isNaN(date.getTime())) return 'Invalid Time'; // Return empty string if date is invalid
+    return format(date, 'h:mm a'); // e.g., 14:30
+}
+function formatReadableDateTime(datetimeString: string): string {
+    if (!datetimeString) return 'Invlalid date';
+      // Replace space with 'T' to ensure ISO 8601 format for reliable parsing
+     const isoString = datetimeString.includes(' ') ? datetimeString.replace(' ', 'T') : datetimeString;
+    const date = new Date(isoString);
+    if (isNaN(date.getTime())) return 'Invalid date';
+    return format(date, "MMMM d, yyyy 'at' h:mm a"); 
+}
 export default function CalendarPage() {
   const [date, setDate] = useState<Date | undefined>(new Date())
   const [appointments, setAppointments] = useState<Appointment[]>([])
   const [isLoading, setIsLoading] = useState(true)
-  const [isDialogOpen, setIsDialogOpen] = useState(false);
-
+  const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
+  const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
+  const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);  
   const [newAppointment, setNewAppointment] = useState({ patientName: '', type: '', time: '' });
-  
+  // State for autocomplete
+  const [allPatients, setAllPatients] = useState<Patient[]>([]);
+  const [suggestions, setSuggestions] = useState<Patient[]>([]);
+  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
   const { toast } = useToast()
 
   const fetchAppointments = async () => {
@@ -44,10 +63,49 @@ export default function CalendarPage() {
     }
   }
 
+   const fetchAllPatients = async () => {
+    try {
+        const patientsData = await getPatients();
+        setAllPatients(patientsData);
+    } catch (error) {
+        console.error("Failed to fetch patients for autocomplete", error);
+        toast({ variant: "destructive", title: "Error", description: "Could not load patient list for suggestions."})
+    }
+   };
+
   useEffect(() => {
     fetchAppointments();
   }, [date])
 
+  useEffect(() => {
+    // Fetch all patients once when the component mounts
+    fetchAllPatients();
+  }, []);
+
+  const handlePatientNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewAppointment({...newAppointment, patientName: value});
+    if (value.length > 0) {
+      const filteredSuggestions = allPatients.filter(p => 
+        p.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setSuggestions(filteredSuggestions);
+      setIsSuggestionsOpen(filteredSuggestions.length > 0);
+    } else {
+      setSuggestions([]);
+      setIsSuggestionsOpen(false);
+    }
+  };
+
+  const handleSuggestionClick = (patient: Patient) => {
+    setNewAppointment({...newAppointment, patientName: patient.name});
+    setSuggestions([]);
+    setIsSuggestionsOpen(false);
+  };
+  const handleViewAppointment = (appointment: Appointment) => {
+    setSelectedAppointment(appointment);
+    setIsViewDialogOpen(true);
+  };
   const handleSaveAppointment = async () => {
     if (!date || !newAppointment.patientName || !newAppointment.time || !newAppointment.type) {
         toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all fields."})
@@ -66,14 +124,10 @@ export default function CalendarPage() {
             }),
         });
         
-        if (result.success) {
-            toast({ title: "Success", description: result.message });
-            fetchAppointments(); // Refresh appointments list
-            setIsDialogOpen(false); // Close dialog
-            setNewAppointment({ patientName: '', type: '', time: '' }); // Reset form
-        } else {
-            toast({ variant: "destructive", title: "Error", description: result.message });
-        }
+        toast({ title: "Success", description: result.message });
+        fetchAppointments(); // Refresh appointments list
+        setIsAddDialogOpen(false); // Close dialog
+        setNewAppointment({ patientName: '', type: '', time: '' }); // Reset form 
     } catch (error: any) {
          toast({ variant: "destructive", title: "Error", description: error.message });
     }
@@ -121,20 +175,20 @@ export default function CalendarPage() {
                                 <Loader2 className="h-8 w-8 animate-spin" />
                             </div>
                         ) : appointments.length > 0 ? (
-                           appointments.map((app, index) => (
+                           appointments.map((app, index) => (console.log("app",app),
                              <div key={index} className="flex items-center">
                                 <div className="flex-grow">
-                                    <p className="font-semibold">{app.time} - {app.type}</p>
+                                    <p className="font-semibold">{formatTime(app.datetime)} - {app.type}</p>
                                     <p className="text-sm text-muted-foreground">{app.patientName}</p>
                                 </div>
-                                <Button variant="ghost" size="sm">View</Button>
+                                <Button variant="ghost" size="sm" onClick={() => handleViewAppointment(app)}>View</Button>
                             </div>
                            ))
                         ) : (
                             <p className="text-sm text-muted-foreground text-center py-4">No appointments for this day.</p>
                         )}
                     </div>
-                     <Dialog open={isDialogOpen} onOpenChange={setIsDialogOpen}>
+                     <Dialog open={isAddDialogOpen} onOpenChange={setIsAddDialogOpen}>
                         <DialogTrigger asChild>
                             <Button className="w-full mt-6" disabled={!date}>
                                 <PlusCircle className="mr-2 h-4 w-4" /> Add Appointment
@@ -150,7 +204,25 @@ export default function CalendarPage() {
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="patient-name" className="text-right">Patient Name</Label>
-                                    <Input id="patient-name" value={newAppointment.patientName} onChange={(e) => setNewAppointment({...newAppointment, patientName: e.target.value})} className="col-span-3" />
+                                      <Popover open={isSuggestionsOpen} onOpenChange={setIsSuggestionsOpen}>
+                                       <PopoverAnchor asChild>
+                                           <Input id="patient-name" value={newAppointment.patientName} onChange={handlePatientNameChange} className="col-span-3" autoComplete="off" />
+                                       </PopoverAnchor>
+                                       <PopoverContent className="w-[360px] p-0" align="start">
+                                            <div className="border rounded-md max-h-40 overflow-y-auto">
+                                                {suggestions.map((patient) => (
+                                                    <div 
+                                                        key={patient.id} 
+                                                        className="px-3 py-2 cursor-pointer hover:bg-muted"
+                                                        onClick={() => handleSuggestionClick(patient)}
+                                                    >
+                                                        <p className="font-medium">{patient.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{patient.email}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                       </PopoverContent>
+                                    </Popover>
                                 </div>
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="appointment-type" className="text-right">Type</Label>
@@ -170,6 +242,42 @@ export default function CalendarPage() {
             </Card>
         </div>
       </div>
+       {/* View Appointment Details Dialog */}
+      <Dialog open={isViewDialogOpen} onOpenChange={setIsViewDialogOpen}>
+        <DialogContent>
+            {selectedAppointment && (
+                <>
+                <DialogHeader>
+                    <DialogTitle className="font-headline">Appointment Details</DialogTitle>
+                    <DialogDescription>
+                        Full details for the scheduled appointment.
+                    </DialogDescription>
+                </DialogHeader>
+                <div className="grid gap-4 py-4">
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-right font-semibold">Patient</Label>
+                        <p className="col-span-2">{selectedAppointment.patientName}</p>
+                    </div>
+                     <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-right font-semibold">Type</Label>
+                        <p className="col-span-2">{selectedAppointment.type}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-right font-semibold">Date & Time</Label>
+                        <p className="col-span-2">{formatReadableDateTime(selectedAppointment.datetime)}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-right font-semibold">Status</Label>
+                        <p className="col-span-2 capitalize">{selectedAppointment.status}</p>
+                    </div>
+                </div>
+                <DialogFooter>
+                    <Button variant="outline" onClick={() => setIsViewDialogOpen(false)}>Close</Button>
+                </DialogFooter>
+                </>
+            )}
+        </DialogContent>
+      </Dialog>
     </div>
   )
 }
