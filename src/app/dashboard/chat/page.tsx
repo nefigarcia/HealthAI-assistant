@@ -11,7 +11,7 @@ import { Bot, Sparkles, Send, Loader2 } from "lucide-react";
 import { cn } from "@/lib/utils";
 import { apiFetch } from "@/lib/api";
 import { Skeleton } from "@/components/ui/skeleton";
-import { formatDistanceToNow } from "date-fns";
+import { formatDistanceToNow, set } from "date-fns";
 
 type Message = {
   id: number;
@@ -94,60 +94,78 @@ export default function ChatPage() {
     }
   }
 
-  useEffect(() => {
-    fetchConversations();
-     // Establish WebSocket connection
-    // Note: In a real production app, the WebSocket URL should come from an environment variable.
-    const wsUrl = process.env.NODE_ENV === 'production' 
-      ? `wss://${window.location.host}` 
-      : `ws://${window.location.hostname}:3001`; // Assumes backend runs on 3001 in dev
-
-    ws.current = new WebSocket(wsUrl);
-
-    ws.current.onopen = () => {
-        console.log("WebSocket connected");
-        // Identify this client as the admin
-        ws.current?.send(JSON.stringify({ type: 'identify', role: 'admin' }));
+    useEffect(() => {
+    const fetchConversations = async () => {
+      setIsLoading(true);
+      try {
+          const data = await apiFetch('/ai/conversations');
+          setChats(data || []);
+          if (data && data.length > 0 && !selectedChatId) {
+              setSelectedChatId(data[0].id);
+          }
+      } catch(error: any) {
+          toast({
+            variant: "destructive",
+            title: "Error fetching conversations",
+            description: error.message || "Could not load chat history.",
+          });
+      } finally {
+          setIsLoading(false);
+      }
     };
+    fetchConversations();
+     // --- WebSocket Connection ---
+    const connectWebSocket = () => {
+      try {
+         const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const ws_url = `${wsProtocol}//${wsProtocol === 'ws:' ? window.location.host.replace(/:\d+$/, ':3001') : 'shielded-brushlands-89617.herokuapp.com'}`;
+        
+        ws.current = new WebSocket(ws_url);
 
-    ws.current.onmessage = (event) => {
-        const data = JSON.parse(event.data);
-        if (data.type === 'incoming_message') {
-            const { patientId, message } = data.payload;
+        ws.current.onopen = () => {
+          console.log("Admin WebSocket connected");
+          ws.current?.send(JSON.stringify({ type: 'identify', role: 'admin' }));
+        };
+
+        ws.current.onmessage = (event) => {
+          const incoming = JSON.parse(event.data);
+          if (incoming.type === 'incoming_message') {
+            const { patientId, message } = incoming.payload;
             
-            // Update the chat state with the new message
-            setChats(prevChats => {
-                return prevChats.map(chat => {
-                    if (chat.id === patientId) {
-                        return {
-                            ...chat,
-                            messages: [...chat.messages, message],
-                            lastMessage: message.text,
-                            lastMessageTime: new Date().toISOString()
-                        };
-                    }
-                    return chat;
-                });
-            });
-        }
+            // Update the specific chat with the new message from the patient
+            setChats(prevChats => 
+              prevChats.map(chat => 
+                chat.id === patientId
+                ? { ...chat, messages: [...chat.messages, message], lastMessage: message.text, lastMessageTime: new Date().toISOString() }
+                : chat
+              )
+            );
+          }
+        };
+
+        ws.current.onclose = () => {
+          console.log("Admin WebSocket disconnected. Attempting to reconnect...");
+          setTimeout(connectWebSocket, 5000); // Reconnect after 5 seconds
+        };
+
+        ws.current.onerror = (error) => {
+          console.error("WebSocket error:", error);
+           toast({
+            variant: "destructive",
+            title: "Chat Connection Error",
+            description: "Could not establish a real-time connection. Please refresh.",
+          });
+        };
+
+      } catch (error) {
+        console.error("Failed to initialize WebSocket:", error);
+      }
     };
     
-    ws.current.onclose = () => {
-        console.log("WebSocket disconnected");
-    };
+    connectWebSocket();
 
-    ws.current.onerror = (error) => {
-        console.error("WebSocket error:", error);
-        toast({
-            variant: "destructive",
-            title: "Chat connection error",
-            description: "Could not establish a real-time connection to the chat server.",
-        });
-    };
-
-    // Cleanup on component unmount
     return () => {
-        ws.current?.close();
+      ws.current?.close();
     };
   }, []);
 
@@ -184,6 +202,7 @@ export default function ChatPage() {
             title: "Cannot send message",
             description: "Chat is not connected. Please refresh the page.",
         });
+        setIsSending(false);
       }
   };
 
@@ -301,9 +320,9 @@ export default function ChatPage() {
                     placeholder={`Message ${selectedChat.patientName}...`}
                     // This functionality would need a live connection (e.g. WebSockets)
                     // For now, we disable sending messages from the admin dashboard to the patient.
-                    disabled={true} 
+                    disabled={isSending} 
                 />
-                <Button onClick={handleSendToPatient} disabled={true}><Send className="h-4 w-4" /></Button>
+                <Button onClick={handleSendToPatient} disabled={isSending}>{isSending ? <Loader2 className="h-4 w-4 animate-spin" /> : <Send className="h-4 w-4" />}</Button>
                 </div>
             </CardFooter>
         </Card>
