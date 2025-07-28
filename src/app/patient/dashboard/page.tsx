@@ -1,6 +1,6 @@
 "use client";
 
-import { useState, useEffect } from "react";
+import { useState, useEffect, useRef } from "react";
 import { usePatientAuth } from './layout'; // Import the hook from the layout
 import { Avatar, AvatarFallback, AvatarImage } from "@/components/ui/avatar";
 import { Button } from "@/components/ui/button";
@@ -25,18 +25,13 @@ export default function PatientDashboardPage() {
   const [appointments, setAppointments] = useState<Appointment[]>([]);
   const [messages, setMessages] = useState<Message[]>([]);
   const [input, setInput] = useState("");
-  const [isLoading, setIsLoading] = useState(false);
-  
+  const [isSending, setIsSending] = useState(false);
+  const [isAiLoading, setIsAiLoading] = useState(false);  
   const { toast } = useToast();
+  const ws = useRef<WebSocket | null>(null);
 
-  useEffect(() => {
-    if (patient) {
-      // Set initial message once patient data is available
-      setMessages([
-        { id: 1, sender: "assistant", text: `Hello ${patient.name}! How can I help you with your appointments today?` }
-      ]);
-      
-      const fetchPatientAppointments = async () => {
+ const fetchPatientAppointments = async () => {
+  if (!patient) return;
         try {
             const encodedPatientName = encodeURIComponent(patient.name);
             const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
@@ -48,43 +43,103 @@ export default function PatientDashboardPage() {
               description: "Could not fetch patient appointments.",
             });
         }
-      }
+      };
+
+  useEffect(() => {
+    if (patient && patient.id) {
+      // Set initial message once patient data is available
+      setMessages([
+        { id: 1, sender: "assistant", text: `Hello ${patient.name}! How can I help you with your appointments today?` }
+      ]);
+      
+     
       fetchPatientAppointments();
+      // --- WebSocket Connection ---
+      const connectWebSocket = () => {
+        try {
+          const wsProtocol = window.location.protocol === 'https:' ? 'wss:' : 'ws:';
+          const ws_url = `${wsProtocol}//${wsProtocol === 'ws:' ? window.location.host.replace(/:\d+$/, ':3001') : 'shielded-brushlands-89617.herokuapp.com'}`;
+          ws.current = new WebSocket(ws_url);
+          console.log("Connecting to WebSocket at", ws_url);
+          ws.current.onopen = () => {
+            console.log(`Patient ${patient.id} WebSocket connected`);
+            ws.current?.send(JSON.stringify({ type: 'identify', role: 'patient', patientId: patient.id }));
+          };
+
+          ws.current.onmessage = (event) => {
+            const incoming = JSON.parse(event.data);
+            if (incoming.type === 'incoming_message') {
+              setMessages(prev => [...prev, incoming.payload.message]);
+            }
+          };
+
+          ws.current.onclose = () => {
+            console.log("Patient WebSocket disconnected. Reconnecting...");
+            setTimeout(connectWebSocket, 5000);
+          };
+
+          ws.current.onerror = (error) => {
+            console.error("Patient WebSocket error:", error);
+            toast({
+              variant: "destructive",
+              title: "Chat Connection Error",
+              description: "Could not establish a real-time connection.",
+            });
+          };
+        } catch (error) {
+           console.error("Failed to initialize patient WebSocket:", error);
+        }
+      };
+      
+      connectWebSocket();
     }
-  }, [patient, toast]);
+
+    return () => {
+      ws.current?.close();
+    };
+  }, [patient]);
 
   const handleSendMessage = async () => {
-    if (input.trim() && patient) {
+    if (!input.trim() || !patient) return;
       const newUserMessage: Message = { id: Date.now(), sender: "user", text: input };
+       setMessages(prev => [...prev, newUserMessage]);
+    
+    // Check if it's a message for the admin or a command for the AI
+    if (input.toLowerCase().startsWith("message clinic:")) {
+      // Real-time message to admin
+       if (ws.current?.readyState === WebSocket.OPEN) {
+         const payload = { patientId: patient.id, message: newUserMessage };
+         ws.current.send(JSON.stringify({ type: 'chat_message', sender: 'patient', payload }));
+       }
+    } else {
+      // It's a query for the AI assistant
       const currentMessages = [...messages, newUserMessage];
-      setMessages(prev => [...prev, newUserMessage]);
       const currentInput = input;
-      setInput("");
-      setIsLoading(true);
-
+      setIsAiLoading(true);
       try {
-        const result = await apiFetch('/api/patient-assistant', {
-            method: 'POST',
-            body: JSON.stringify({ query: currentInput, patientName: patient.name, messages: currentMessages.map(m=>({sender: m.sender, text: m.text})) }),
-        });
-        const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
-        setMessages(prev => [...prev, newAssistantMessage]);
+          const result = await apiFetch('/api/patient-assistant', {
+              method: 'POST',
+              body: JSON.stringify({
+                  patientName: patient.name,
+                  query: currentInput,
+                  messages: currentMessages, 
+              }),
+          });
+          const newAssistantMessage: Message = { id: Date.now() + 1, sender: "assistant", text: result.response };
+          setMessages(prev => [...prev, newAssistantMessage]);
+          // Refresh appointments if AI might have changed them
+          fetchPatientAppointments(); 
       } catch (error: any) {
-        toast({
-          variant: "destructive",
-          title: "AI Assistant Error",
-          description: error.message || "An error occurred while communicating with the AI.",
-        });
+          toast({ variant: "destructive", title: "AI Assistant Error", description: error.message });
       } finally {
-        setIsLoading(false);
-        // Refresh appointments after AI interaction
-         const encodedPatientName = encodeURIComponent(patient.name);
-         const patientAppointments = await apiFetch(`/calendar/appointments/patient/${encodedPatientName}`);
-         setAppointments(patientAppointments || []);
+          setIsAiLoading(false);
       }
-    }
+      }
+     setInput("");
   };
   const initials = patient?.name?.split(' ').map(n => n[0]).join('').toUpperCase() || 'P';
+  const isLoading = isAiLoading || isSending;
+
   return (
     <div className="grid gap-8 md:grid-cols-3">
       <div className="md:col-span-1 space-y-8">
@@ -128,9 +183,9 @@ export default function PatientDashboardPage() {
         <Card className="flex flex-col h-[calc(100vh-160px)]">
             <CardHeader>
                 <CardTitle className="font-headline flex items-center gap-2">
-                <Sparkles className="text-accent" /> AI Assistant
+                <Sparkles className="text-accent" /> AI Assistant & Chat
                 </CardTitle>
-                <CardDescription>Ask me to see your appointments or request a reschedule.</CardDescription>
+                <CardDescription>Ask the AI for help or start your message with "message clinic:" to chat with staff.</CardDescription>
             </CardHeader>
             <ScrollArea className="flex-grow p-4">
                 <div className="space-y-4">
@@ -159,7 +214,7 @@ export default function PatientDashboardPage() {
                     value={input}
                     onChange={(e) => setInput(e.target.value)}
                     onKeyPress={(e) => e.key === 'Enter' && handleSendMessage()}
-                    placeholder="Ask about your appointments..."
+                    placeholder="Ask AI or start with 'message clinic:' to chat"
                     disabled={isLoading || !patient}
                 />
                 <Button onClick={handleSendMessage} disabled={isLoading || !patient}>

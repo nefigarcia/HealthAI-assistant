@@ -22,6 +22,7 @@ const nextConfig: NextConfig = {
     NEXT_PUBLIC_API_URL: process.env.NEXT_PUBLIC_API_URL,
   },
   output: 'export',
+  trailingSlash: true,
 };
 
 export default nextConfig;
