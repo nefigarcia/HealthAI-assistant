@@ -4,11 +4,12 @@ import Link from "next/link"
 import { usePathname } from "next/navigation"
 import { cn } from "@/lib/utils"
 import { Button } from "@/components/ui/button"
-import { LayoutDashboard, MessageSquare, Calendar, Bell, Settings, Users } from "lucide-react"
+import { LayoutDashboard, MessageSquare, Calendar, Bell, Settings, Users, Stethoscope } from "lucide-react"
 
 const links = [
     { href: "/dashboard", label: "Dashboard", icon: LayoutDashboard },
     { href: "/dashboard/patients", label: "Patients", icon: Users },
+    { href: "/dashboard/doctors", label: "Doctors", icon: Stethoscope },
     { href: "/dashboard/chat", label: "AI Chat", icon: MessageSquare },
     { href: "/dashboard/calendar", label: "Calendar", icon: Calendar },
     { href: "/dashboard/reminders", label: "Reminders", icon: Bell },

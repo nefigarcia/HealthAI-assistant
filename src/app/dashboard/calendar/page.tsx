@@ -12,6 +12,7 @@ import { useToast } from "@/hooks/use-toast"
 import { apiFetch } from "@/lib/api"
 import type { Appointment } from "@/services/calendar"
 import { getPatients, type Patient } from "@/services/patients"
+import { getDoctors, type Doctor } from "@/services/doctors"
 import { Popover, PopoverContent, PopoverAnchor } from "@/components/ui/popover"
 import { format } from 'date-fns';
 
@@ -41,11 +42,18 @@ export default function CalendarPage() {
   const [isAddDialogOpen, setIsAddDialogOpen] = useState(false);
   const [isViewDialogOpen, setIsViewDialogOpen] = useState(false);
   const [selectedAppointment, setSelectedAppointment] = useState<Appointment | null>(null);  
-  const [newAppointment, setNewAppointment] = useState({ patientName: '', type: '', time: '' });
+  const [newAppointment, setNewAppointment] = useState({ patientName: '', type: '', time: '', doctorName: '' });
   // State for autocomplete
   const [allPatients, setAllPatients] = useState<Patient[]>([]);
-  const [suggestions, setSuggestions] = useState<Patient[]>([]);
-  const [isSuggestionsOpen, setIsSuggestionsOpen] = useState(false);
+  const [patientSuggestions, setPatientSuggestions] = useState<Patient[]>([]);
+  const [isPatientSuggestionsOpen, setIsPatientSuggestionsOpen] = useState(false);
+  
+  // State for doctor autocomplete
+  const [allDoctors, setAllDoctors] = useState<Doctor[]>([]);
+  const [doctorSuggestions, setDoctorSuggestions] = useState<Doctor[]>([]);
+  const [isDoctorSuggestionsOpen, setIsDoctorSuggestionsOpen] = useState(false);
+  const [selectedDoctor, setSelectedDoctor] = useState<Doctor | null>(null);
+
   const { toast } = useToast()
 
   const fetchAppointments = async () => {
@@ -73,8 +81,19 @@ export default function CalendarPage() {
     }
    };
 
+    const fetchAllDoctors = async () => {
+     try {
+       const doctorsData = await getDoctors();
+       setAllDoctors(doctorsData);
+     } catch (error) {
+       console.error("Failed to fetch doctors", error);
+       toast({ variant: "destructive", title: "Error", description: "Could not load doctor list."})
+     }
+   };
+
   useEffect(() => {
     fetchAppointments();
+    fetchAllDoctors();
   }, [date])
 
   useEffect(() => {
@@ -89,26 +108,49 @@ export default function CalendarPage() {
       const filteredSuggestions = allPatients.filter(p => 
         p.name.toLowerCase().includes(value.toLowerCase())
       );
-      setSuggestions(filteredSuggestions);
-      setIsSuggestionsOpen(filteredSuggestions.length > 0);
+       setPatientSuggestions(filteredSuggestions);
+      setIsPatientSuggestionsOpen(filteredSuggestions.length > 0);
     } else {
-      setSuggestions([]);
-      setIsSuggestionsOpen(false);
+      setPatientSuggestions([]);
+      setIsPatientSuggestionsOpen(false);
     }
   };
 
-  const handleSuggestionClick = (patient: Patient) => {
+  const handlePatientSuggestionClick = (patient: Patient) => {
+
     setNewAppointment({...newAppointment, patientName: patient.name});
-    setSuggestions([]);
-    setIsSuggestionsOpen(false);
+    setPatientSuggestions([]);
+    setIsPatientSuggestionsOpen(false);
   };
+  const handleDoctorNameChange = (e: React.ChangeEvent<HTMLInputElement>) => {
+    const value = e.target.value;
+    setNewAppointment({...newAppointment, doctorName: value});
+    setSelectedDoctor(null);
+    if (value.length > 0) {
+      const filteredSuggestions = allDoctors.filter(d => 
+        d.name.toLowerCase().includes(value.toLowerCase())
+      );
+      setDoctorSuggestions(filteredSuggestions);
+      setIsDoctorSuggestionsOpen(filteredSuggestions.length > 0);
+    } else {
+      setDoctorSuggestions([]);
+      setIsDoctorSuggestionsOpen(false);
+    }
+  };
+
+  const handleDoctorSuggestionClick = (doctor: Doctor) => {
+    setNewAppointment({...newAppointment, doctorName: doctor.name});
+    setSelectedDoctor(doctor);
+    setDoctorSuggestions([]);
+    setIsDoctorSuggestionsOpen(false);
+  }
   const handleViewAppointment = (appointment: Appointment) => {
     setSelectedAppointment(appointment);
     setIsViewDialogOpen(true);
   };
   const handleSaveAppointment = async () => {
-    if (!date || !newAppointment.patientName || !newAppointment.time || !newAppointment.type) {
-        toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all fields."})
+    if (!date || !newAppointment.patientName || !newAppointment.time || !newAppointment.type || !selectedDoctor) {
+        toast({ variant: "destructive", title: "Missing fields", description: "Please fill out all fields, including selecting a doctor."})
         return;
     }
     
@@ -120,14 +162,16 @@ export default function CalendarPage() {
                 patientName: newAppointment.patientName, 
                 date: formattedDate, 
                 time: newAppointment.time, 
-                type: newAppointment.type 
+                type: newAppointment.type,
+                doctorId: selectedDoctor.id, 
             }),
         });
         
         toast({ title: "Success", description: result.message });
         fetchAppointments(); // Refresh appointments list
         setIsAddDialogOpen(false); // Close dialog
-        setNewAppointment({ patientName: '', type: '', time: '' }); // Reset form 
+        setNewAppointment({ patientName: '', type: '', time: '', doctorName: '' }); // Reset form
+        setSelectedDoctor(null);
     } catch (error: any) {
          toast({ variant: "destructive", title: "Error", description: error.message });
     }
@@ -204,20 +248,41 @@ export default function CalendarPage() {
                             <div className="grid gap-4 py-4">
                                 <div className="grid grid-cols-4 items-center gap-4">
                                     <Label htmlFor="patient-name" className="text-right">Patient Name</Label>
-                                      <Popover open={isSuggestionsOpen} onOpenChange={setIsSuggestionsOpen}>
+                                    <Popover open={isPatientSuggestionsOpen} onOpenChange={setIsPatientSuggestionsOpen}>
                                        <PopoverAnchor asChild>
                                            <Input id="patient-name" value={newAppointment.patientName} onChange={handlePatientNameChange} className="col-span-3" autoComplete="off" />
                                        </PopoverAnchor>
-                                       <PopoverContent className="w-[360px] p-0" align="start">
-                                            <div className="border rounded-md max-h-40 overflow-y-auto">
-                                                {suggestions.map((patient) => (
+                                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">                                            <div className="border rounded-md max-h-40 overflow-y-auto">
+                                                {patientSuggestions.map((patient) => (
                                                     <div 
                                                         key={patient.id} 
                                                         className="px-3 py-2 cursor-pointer hover:bg-muted"
-                                                        onClick={() => handleSuggestionClick(patient)}
+                                                        onClick={() => handlePatientSuggestionClick(patient)}
                                                     >
                                                         <p className="font-medium">{patient.name}</p>
                                                         <p className="text-xs text-muted-foreground">{patient.email}</p>
+                                                    </div>
+                                                ))}
+                                            </div>
+                                       </PopoverContent>
+                                    </Popover>
+                                </div>
+                                 <div className="grid grid-cols-4 items-center gap-4">
+                                    <Label htmlFor="doctor-name" className="text-right">Doctor</Label>
+                                    <Popover open={isDoctorSuggestionsOpen} onOpenChange={setIsDoctorSuggestionsOpen}>
+                                       <PopoverAnchor asChild>
+                                           <Input id="doctor-name" value={newAppointment.doctorName} onChange={handleDoctorNameChange} className="col-span-3" autoComplete="off" placeholder="Select a doctor" />
+                                       </PopoverAnchor>
+                                       <PopoverContent className="w-[--radix-popover-trigger-width] p-0" align="start">
+                                            <div className="border rounded-md max-h-40 overflow-y-auto">
+                                                {doctorSuggestions.map((doctor) => (
+                                                    <div 
+                                                        key={doctor.id} 
+                                                        className="px-3 py-2 cursor-pointer hover:bg-muted"
+                                                        onClick={() => handleDoctorSuggestionClick(doctor)}
+                                                    >
+                                                        <p className="font-medium">{doctor.name}</p>
+                                                        <p className="text-xs text-muted-foreground">{doctor.email}</p>
                                                     </div>
                                                 ))}
                                             </div>
@@ -257,6 +322,10 @@ export default function CalendarPage() {
                     <div className="grid grid-cols-3 items-center gap-4">
                         <Label className="text-right font-semibold">Patient</Label>
                         <p className="col-span-2">{selectedAppointment.patientName}</p>
+                    </div>
+                    <div className="grid grid-cols-3 items-center gap-4">
+                        <Label className="text-right font-semibold">Doctor</Label>
+                        <p className="col-span-2">{selectedAppointment.doctorName}</p>
                     </div>
                      <div className="grid grid-cols-3 items-center gap-4">
                         <Label className="text-right font-semibold">Type</Label>
